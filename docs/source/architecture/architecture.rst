@@ -1,5 +1,5 @@
-SeQuiLa Architecture
-=====================
+Architecture
+===============
 
 
 Algorithm

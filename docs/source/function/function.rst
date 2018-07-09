@@ -1,7 +1,7 @@
 
 
-SeQuiLa API
-===========
+API
+=======
 
 
 The API that is provided by SeQuiLa is not a set of predefined functions but
