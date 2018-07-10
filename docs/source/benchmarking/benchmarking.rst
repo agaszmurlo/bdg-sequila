@@ -54,6 +54,8 @@ Software        Version
 CDH             5.12
 Apache Hadoop   2.6.0
 Apache Spark    2.2.1
+ADAM            0.22
+featureCounts   1.6.0
 Oracle JDK      1.8
 Scala           2.11.8
 =============   =======
@@ -81,8 +83,63 @@ WES-SN - tests performed on a single node using WES dataset
 
 WGS-CL - tests performed on a cluster using WGS dataset
 
+
 Test procedure
 ##############
+
+
+File-dataframe mapping
+***********************
+
+The first step of the testing procedure was to prepare mapping between input datasets (in BAM and BED formats)  and
+their corresponding dataframe/table abstraction. In case of alignment file our custom data source has been used, for a BED file Spark's builtin dedicate
+for CSV data access.
+
+
+BAM
+
+.. code-block:: scala
+
+    val bamPath = "NA12878*.bam"
+    spark.sql(
+      s"""
+         |CREATE TABLE reads
+         |USING org.biodatageeks.datasources.BAM.BAMDataSource
+         |OPTIONS(path "${bamPath}")
+         |
+      """.stripMargin)
+    spark.sql(s"SELECT contigName,start,end FROM reads LIMIT 1").show()
+
+    +----------+-----+---+
+    |contigName|start|end|
+    +----------+-----+---+
+    |      chr1|   34|109|
+    +----------+-----+---+
+
+
+
+BED
+
+.. code-block:: scala
+
+    val  bedPath="tgp_exome_hg18.bed"
+    spark.sql(s"""
+        |CREATE TABLE targets(contigName String,start Integer,end Integer)
+        |USING csv
+        |OPTIONS (path "file:///${bedPath}", delimiter "\t")""".stripMargin)
+    spark.sql("SELECT * FROM targets LIMIT 1").show
+
+    +----------+-----+----+
+    |contigName|start| end|
+    +----------+-----+----+
+    |      chr1| 4806|4926|
+    +----------+-----+----+
+
+
+SQL query for counting features
+*******************************
+
+For counting reads overlapping predefined feature regions the following SQL query has been used:
 
 .. code-block:: sql
 
@@ -94,6 +151,20 @@ Test procedure
          CAST(reads.start AS INTEGER)<=CAST(targets.end AS INTEGER)
          )
          GROUP BY targets.contigName,targets.start,targets.end
+
+Exaclty the same query has been used for both single node and
+
+
+Apache Spark settings
+*********************
+
+=============== ======
+Parameter       Values
+=============== ======
+executor-memory  4-8g
+executor-cores   2-4
+num-executors    1-15
+=============== ======
 
 Results
 #######
