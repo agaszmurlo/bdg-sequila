@@ -2,7 +2,7 @@
 Benchmarking
 =============
 
-Test query used:
+Test query:
 
 .. code-block:: sql
 
