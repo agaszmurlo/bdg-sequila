@@ -3,10 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-SeQuiLa documentation
-======================
+SeQuiLa User Guide 
+====================
 
-SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals querying and processing.  
+SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals querying and processing built on top of `Apache Spark`_. Range joins are bread and butter for NGS analysis but high volume of data make them very slow or even failing to compute. 
+
+.. _Apache Spark: https://spark.apache.org/ 
 
 * SeQuiLa is fast:
 
@@ -29,6 +31,19 @@ SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals queryi
    - can be run on single computer (locally) or Hadoop cluster using YARN
 
 
+You can find SeQuiLa publicly available in following repositories:
+
+
+==========   =====================================================================  
+Repo         Link
+==========   =====================================================================
+GitHub       `<https://github.com/ZSI-Bio/|project_name|>`_
+Maven        `<https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/>`_ 
+Docker Hub   `<https://hub.docker.com/r/biodatageeks/|project_name|/>`_
+==========   ===================================================================== 
+
+Contents:
+==========
 
 .. toctree::
    :numbered:
