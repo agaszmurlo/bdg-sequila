@@ -86,7 +86,8 @@ WGS-CL - tests performed on a cluster using WGS dataset
 
 Test procedure
 ##############
-
+To achieve reliable results test cases have been run 3 times.
+Before each run disk caches on all nodes have been purged.
 
 File-dataframe mapping
 ***********************
