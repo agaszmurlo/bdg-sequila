@@ -152,7 +152,7 @@ For counting reads overlapping predefined feature regions the following SQL quer
          )
          GROUP BY targets.contigName,targets.start,targets.end
 
-Exaclty the same query has been used for both single node and
+Exaclty the same query has been used for both single node and cluster tests.
 
 
 Apache Spark settings
@@ -161,6 +161,7 @@ Apache Spark settings
 =============== ======
 Parameter       Values
 =============== ======
+driver-memory    8g
 executor-memory  4-8g
 executor-cores   2-4
 num-executors    1-15
@@ -168,6 +169,11 @@ num-executors    1-15
 
 Results
 #######
+SeQuiLa outperforms selected competing tools in terms of speed on single node (1.7-22.1 times) and cluster (3.2-4.7 times).
+SeQuiLa strategy involving broadcasting interval forest with all data columns (SeQuiLa_it_all) performs best
+in most of the cases (no network shuffling required), whereas broadcasting intervals with identifiers only (SeQuiLa_it_int)
+performs comparable to, or better than GenAp.
+All algorithms favours columnar (ADAM) to row oriented (BAM) file format due to column pruning and disk I/O operations reduction.
 
 
 Local mode
@@ -183,3 +189,7 @@ Hadoop cluster
 
 Discussion
 ##########
+Results showed that SeQuiLa significantly accelerates  genomic interval queries, being the fastest tool in our benchmark.
+We are aware that paradigm of distributed computing is currently not fully embraced by bioinformaticians therefore we have put
+additional effort into preparing SeQuiLa to be easily integrated into existing applications and pipelines.
+
