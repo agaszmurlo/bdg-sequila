@@ -92,7 +92,7 @@ Before each run disk caches on all nodes have been purged.
 File-dataframe mapping
 ***********************
 
-The first step of the testing procedure was to prepare mapping between input datasets (in BAM and BED formats)  and
+The first step of the testing procedure was to prepare mapping between input datasets (in BAM, ADAM and BED formats)  and
 their corresponding dataframe/table abstraction. In case of alignment file our custom data source has been used, for a BED file Spark's builtin dedicate
 for CSV data access.
 
@@ -135,6 +135,10 @@ BED
     +----------+-----+----+
     |      chr1| 4806|4926|
     +----------+-----+----+
+
+ADAM
+
+.. code-block:: scala
 
 
 SQL query for counting features
