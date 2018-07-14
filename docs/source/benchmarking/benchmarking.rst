@@ -214,7 +214,7 @@ Hadoop cluster
 Limitations
 ***********
 
-SeQuiLa is slower than featureCounts in a single-threaded applications due to less preformat Java BAM reader( mainly BGZF decompression) available
+SeQuiLa is slower than featureCounts in a single-threaded applications due to less performat Java BAM reader( mainly BGZF decompression) available
 in htsjdk library.
 
 Discussion
