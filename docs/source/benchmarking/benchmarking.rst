@@ -93,7 +93,7 @@ File-dataframe mapping
 ***********************
 
 The first step of the testing procedure was to prepare mapping between input datasets (in BAM, ADAM and BED formats)  and
-their corresponding dataframe/table abstraction. In case of alignment file our custom data source has been used, for a BED file Spark's builtin dedicate
+their corresponding dataframe/table abstraction. In case of alignment file our custom data source has been used, for a BED file Spark's builtin dedicated
 for CSV data access.
 
 
@@ -118,6 +118,25 @@ BAM
     +----------+-----+---+
 
 
+ADAM
+
+.. code-block:: scala
+
+    val adamPath = "NA12878*.adam"
+    spark.sql(
+      s"""
+         |CREATE TABLE reads
+         |USING org.biodatageeks.datasources.ADAM.ADAMDataSource
+         |OPTIONS(path "${adamPath}")
+         |
+      """.stripMargin)
+    spark.sql(s"SELECT contigName,start,end FROM reads LIMIT 1").show()
+
+    +----------+-----+---+
+    |contigName|start|end|
+    +----------+-----+---+
+    |      chr1|   34|109|
+    +----------+-----+---+
 
 BED
 
@@ -136,9 +155,8 @@ BED
     |      chr1| 4806|4926|
     +----------+-----+----+
 
-ADAM
 
-.. code-block:: scala
+
 
 
 SQL query for counting features
@@ -174,7 +192,7 @@ num-executors    1-15
 
 Results
 #######
-SeQuiLa outperforms selected competing tools in terms of speed on single node (1.7-22.1 times) and cluster (3.2-4.7 times).
+SeQuiLa when run in parallel outperforms selected competing tools in terms of speed on single node (1.7-22.1 times) and cluster (3.2-4.7 times).
 SeQuiLa strategy involving broadcasting interval forest with all data columns (SeQuiLa_it_all) performs best
 in most of the cases (no network shuffling required), whereas broadcasting intervals with identifiers only (SeQuiLa_it_int)
 performs comparable to, or better than GenAp.
@@ -192,9 +210,16 @@ Hadoop cluster
 
 .. image:: cluster.*
 
+
+Limitations
+***********
+
+SeQuiLa is slower than featureCounts in a single-threaded applications due to less preformat Java BAM reader( mainly BGZF decompression) available
+in htsjdk library.
+
 Discussion
 ##########
-Results showed that SeQuiLa significantly accelerates  genomic interval queries, being the fastest tool in our benchmark.
+Results showed that SeQuiLa significantly accelerates  genomic interval queries.
 We are aware that paradigm of distributed computing is currently not fully embraced by bioinformaticians therefore we have put
 additional effort into preparing SeQuiLa to be easily integrated into existing applications and pipelines.
 

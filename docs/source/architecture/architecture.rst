@@ -70,6 +70,60 @@ Ecosystem
 Integration with R
 ####################
 
+SeQuiLa comes also with first-class integration with R environment using sparklyr-sequila R package.
+
+Installation
+************
+
+.. code-block:: R
+
+    install.packages('devtools')
+    devtools::install_github('ZSI-Bio/bdg-sparklyr-sequila')
+
+Usage
+*****
+
+Local mode
+
+.. code-block:: R
+
+    library(sequila)
+    library(dplyr)
+
+    #create a connection to SeQuiLa using Spark local mode and 1 thread
+    master <- "local[1]"
+    driver_mem <- "2g"
+    ss<-sequila_connect(master,driver_memory=driver_mem)
+
+
+
+YARN
+
+.. code-block:: R
+
+    library(sequila)
+    library(dplyr)
+    #create a connection to SeQuiLa using Spark yarn-mode with 2 executors
+    driver_mem <- "2g"
+    executor_mem <- "2g"
+    executor_num <- "2"
+    master <- "yarn-client"
+    ss<-sequila_connect(master,driver_memory<-driver_mem, executor_memory <- executor_mem, executor_num <- executor_num)
+
+
+Run a query:
+
+.. code-block:: R
+
+    #provided that gr1 and gr2 are Spark tables
+    query <- "SELECT gr1.contigName,gr1.start,gr1.end, gr2.start as start_2,gr2.end as end_2 FROM gr1 JOIN gr2
+        ON (gr1.contigName=gr2.contigName AND gr1.end >= CAST(gr2.start AS INTEGER)
+      AND gr1.start <= CAST(gr2.end AS INTEGER)) order by start"
+    #collect spark results to R dataframe
+    res<- collect(sequila_sql(ss,'results',query))
+    #release Spark resources and close connection
+    sequila_disconnect(ss)
+
 Integration with JDBC
 #######################
 
