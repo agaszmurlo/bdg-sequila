@@ -71,7 +71,7 @@ private[hive] class SparkSQLSessionManagerSeq(hiveServer: HiveServer2, ss: Sequi
   }
 
   override def closeSession(sessionHandle: SessionHandle) {
-    HiveThriftServer2.listener.onSessionClosed(sessionHandle.getSessionId.toString)
+    HiveThriftServer2Seq.listener.onSessionClosed(sessionHandle.getSessionId.toString)
     super.closeSession(sessionHandle)
     sparkSqlOperationManager.sessionToActivePool.remove(sessionHandle)
     sparkSqlOperationManager.sessionToContexts.remove(sessionHandle)

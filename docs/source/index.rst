@@ -13,7 +13,7 @@ SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals queryi
 * SeQuiLa is fast:
 
    - genome-size analysis in several minutes 
-   - 22x speedup against Spark default processing
+   - 22x+ speedup over Spark default processing
    - 100% accuracy in functional tests against GRanges
 
 * SeQuiLa is elastic:
@@ -21,8 +21,9 @@ SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals queryi
    - growing catalogue of utility functions and operations including: `featureCounts`, `countOverlaps` and `coverage`
    - exposed parameters for further performance optimizations 
    - integration with third-party tools through SparkSQL JDBC driver 
-   - can be used natively in R using SparkR tool 
+   - can be used natively in R using sparklyr-sequila package
    - possibility to use SeQuiLa as command line tool without any exposure to Scala/Spark/Hadoop
+   - Docker images available for a quick start
 
 
 * SeQuiLa is scalable:
@@ -34,13 +35,25 @@ SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals queryi
 You can find SeQuiLa publicly available in following repositories:
 
 
-==========   =====================================================================  
-Repo         Link
-==========   =====================================================================
-GitHub       `<https://github.com/ZSI-Bio/|project_name|>`_
-Maven        `<https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/>`_ 
-Docker Hub   `<https://hub.docker.com/r/biodatageeks/|project_name|/>`_
-==========   ===================================================================== 
+=================   =====================================================================
+Repo                 Link
+=================   =====================================================================
+GitHub               `<https://github.com/ZSI-Bio/|project_name|>`_
+Maven(release)       `<https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/>`_
+sparklyr-sequila     `<https://github.com/ZSI-Bio/bdg-sparklyr-sequila/>`_
+Docker Hub           `<https://hub.docker.com/r/biodatageeks/|project_name|/>`_
+=================   =====================================================================
+
+Release notes:
+**************
+
+0.4
+###
+ - completely rewritten R support using sparklyr extension
+ - experimental support for efficient coverage compution exposed as a table-valued function
+ - sample pruning mechanism for queries accessing only subset of samples from table (BAMDatasource)
+ - a new JDBC interface based on SequilaThriftServer
+
 
 Contents:
 ==========
