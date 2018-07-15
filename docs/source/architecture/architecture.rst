@@ -127,6 +127,47 @@ Run a query:
 Integration with JDBC
 #######################
 
+.. figure:: thrift-server.*
+    :align: center
+
+
+The easiest way to start a SequilaThriftServer it to use our Docker image, e.g.:
+
+.. code-block:: bash
+
+    docker run -e USERID=$UID -e GROUPID=$(id -g) \
+    -it --rm -p 10000:10000 -p 4040:4040 biodatageeks/|project_name|:|version| \
+    bdg-start-thriftserver --master=local[2] --driver-memory=2g
+
+It can be further accessed using any JDBC tool, for example beeline or SquirrelSQL:
+
+Beeline
+*******
+
+
+.. code-block:: bash
+
+    beeline -u jdbc:hive2://cdh00:10000
+
+
+SquirrelSQL
+***********
+
+You will need Spark JDBC driver. We have prepared assembly jar for this purpose: http://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/org/biodatageeeks/spark/jdbc/spark-jdbc_2.11/0.12/spark-jdbc_2.11-0.12-assembly.jar
+
+Squirrel SQL configure new driver:
+
+.. figure:: jdbc.*
+    :align: center
+
+Create new Alias:
+
+.. figure:: alias.*
+   :scale: 50%
+   :align: center
+
+    Afterwards you can play with SQL.
+
 Running on YARN
 ################
 
