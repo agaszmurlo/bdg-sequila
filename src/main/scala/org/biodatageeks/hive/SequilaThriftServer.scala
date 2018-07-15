@@ -36,11 +36,11 @@ object SequilaThriftServer extends Logging {
   }
 
   def main(args: Array[String]): Unit = {
-    //System.setSecurityManager(null)
+    System.setSecurityManager(null)
 
     val spark = SparkSession
       .builder
-      //  .master("local[1]")
+       .master("local[1]")
       .getOrCreate
     val ss = new SequilaSession(spark)
     UDFRegister.register(ss)

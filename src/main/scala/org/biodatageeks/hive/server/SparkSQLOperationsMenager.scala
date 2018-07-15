@@ -23,9 +23,8 @@ import java.util.concurrent.ConcurrentHashMap
 import org.apache.hive.service.cli._
 import org.apache.hive.service.cli.operation.{ExecuteStatementOperation, Operation, OperationManager}
 import org.apache.hive.service.cli.session.HiveSession
-
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.{SQLContext, SequilaSession}
 import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.sql.hive.thriftserver.{ReflectionUtils, SparkExecuteStatementOperationSeq}
 import org.apache.spark.sql.internal.SQLConf
@@ -33,7 +32,7 @@ import org.apache.spark.sql.internal.SQLConf
 /**
   * Executes queries using Spark SQL, and maintains a list of handles to active queries.
   */
-private[thriftserver] class SparkSQLOperationManagerSeq()
+private[thriftserver] class SparkSQLOperationManagerSeq(ss: SequilaSession)
   extends OperationManager with Logging {
 
   val handleToOperation = ReflectionUtils
@@ -56,7 +55,7 @@ private[thriftserver] class SparkSQLOperationManagerSeq()
     setConfMap(conf, hiveSessionState.getHiveVariables)
     val runInBackground = async && conf.getConf(HiveUtils.HIVE_THRIFT_SERVER_ASYNC)
     val operation = new SparkExecuteStatementOperationSeq(parentSession, statement, confOverlay,
-      runInBackground)(sqlContext, sessionToActivePool)
+      runInBackground)(ss, sessionToActivePool)
     handleToOperation.put(operation.getHandle, operation)
     logDebug(s"Created Operation for $statement with session=$parentSession, " +
       s"runInBackground=$runInBackground")

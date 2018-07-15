@@ -36,7 +36,7 @@ private[hive] class SparkSQLSessionManagerSeq(hiveServer: HiveServer2, ss: Sequi
   extends SessionManager(hiveServer)
     with ReflectedCompositeService {
 
-  private lazy val sparkSqlOperationManager = new SparkSQLOperationManagerSeq()
+  private lazy val sparkSqlOperationManager = new SparkSQLOperationManagerSeq(ss)
 
   override def init(hiveConf: HiveConf) {
     setSuperField(this, "operationManager", sparkSqlOperationManager)

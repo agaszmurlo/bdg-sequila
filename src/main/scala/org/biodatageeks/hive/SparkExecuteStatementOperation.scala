@@ -44,13 +44,13 @@ private[hive] class SparkExecuteStatementOperationSeq(
                                                     statement: String,
                                                     confOverlay: JMap[String, String],
                                                     runInBackground: Boolean = true)
-                                                  (sqlContext: SQLContext, sessionToActivePool: JMap[SessionHandle, String])
+                                                  (ss:SequilaSession, sessionToActivePool: JMap[SessionHandle, String])
   extends ExecuteStatementOperation(parentSession, statement, confOverlay, runInBackground)
     with Logging {
 
-  val ss = new SequilaSession(sqlContext.sparkSession)
-  UDFRegister.register(ss)
-  SequilaRegister.register(ss)
+//  val ss = new SequilaSession(sqlContext.sparkSession)
+//  UDFRegister.register(ss)
+//  SequilaRegister.register(ss)
 
 
   private var result: DataFrame = _
