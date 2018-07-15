@@ -36,14 +36,14 @@ import org.apache.hive.service.server.HiveServer2
 import org.apache.spark.sql.{SQLContext, SequilaSession}
 import org.apache.spark.sql.hive.thriftserver.ReflectionUtils._
 
-class SparkSQLCLIService(hiveServer: HiveServer2, ss: SequilaSession)
+class SparkSQLCLIServiceSeq(hiveServer: HiveServer2, ss: SequilaSession)
   extends CLIService(hiveServer)
     with ReflectedCompositeService {
 
   override def init(hiveConf: HiveConf) {
     setSuperField(this, "hiveConf", hiveConf)
 
-    val sparkSqlSessionManager = new SparkSQLSessionManager(hiveServer, ss)
+    val sparkSqlSessionManager = new SparkSQLSessionManagerSeq(hiveServer, ss)
     setSuperField(this, "sessionManager", sparkSqlSessionManager)
     addService(sparkSqlSessionManager)
     var sparkServiceUGI: UserGroupInformation = null

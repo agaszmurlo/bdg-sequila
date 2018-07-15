@@ -29,14 +29,14 @@ import org.apache.hive.service.server.HiveServer2
 import org.apache.spark.sql.{SQLContext, SequilaSession}
 import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.sql.hive.thriftserver.ReflectionUtils._
-import org.apache.spark.sql.hive.thriftserver.server.SparkSQLOperationManager
+import org.apache.spark.sql.hive.thriftserver.server.SparkSQLOperationManagerSeq
 
 
-private[hive] class SparkSQLSessionManager(hiveServer: HiveServer2, ss: SequilaSession)
+private[hive] class SparkSQLSessionManagerSeq(hiveServer: HiveServer2, ss: SequilaSession)
   extends SessionManager(hiveServer)
     with ReflectedCompositeService {
 
-  private lazy val sparkSqlOperationManager = new SparkSQLOperationManager()
+  private lazy val sparkSqlOperationManager = new SparkSQLOperationManagerSeq()
 
   override def init(hiveConf: HiveConf) {
     setSuperField(this, "operationManager", sparkSqlOperationManager)
@@ -55,7 +55,7 @@ private[hive] class SparkSQLSessionManager(hiveServer: HiveServer2, ss: SequilaS
       super.openSession(protocol, username, passwd, ipAddress, sessionConf, withImpersonation,
         delegationToken)
     val session = super.getSession(sessionHandle)
-    HiveThriftServer2.listener.onSessionCreated(
+    HiveThriftServer2Seq.listener.onSessionCreated(
       session.getIpAddress, sessionHandle.getSessionId.toString, session.getUsername)
     val ctx = if (ss.sqlContext.conf.hiveThriftServerSingleSession) {
       ss.sqlContext

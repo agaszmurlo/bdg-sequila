@@ -43,9 +43,9 @@ import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
   * The main entry point for the Spark SQL port of HiveServer2.  Starts up a `SparkSQLContext` and a
   * `HiveThriftServer2` thrift server.
   */
-object HiveThriftServer2 extends Logging {
+object HiveThriftServer2Seq extends Logging {
   var uiTab: Option[ThriftServerTab] = None
-  var listener: HiveThriftServer2Listener = _
+  var listener: HiveThriftServer2ListenerSeq = _
 
   /**
     * :: DeveloperApi ::
@@ -53,7 +53,7 @@ object HiveThriftServer2 extends Logging {
     */
   @DeveloperApi
   def startWithContext(ss: SequilaSession): Unit = {
-    val server = new HiveThriftServer2(ss)
+    val server = new HiveThriftServer2Seq(ss)
 
     val executionHive = HiveUtils.newClientForExecution(
       ss.sqlContext.sparkContext.conf,
@@ -61,7 +61,7 @@ object HiveThriftServer2 extends Logging {
 
     server.init(executionHive.conf)
     server.start()
-    listener = new HiveThriftServer2Listener(server, ss.sqlContext.conf)
+    listener = new HiveThriftServer2ListenerSeq(server, ss.sqlContext.conf)
     ss.sqlContext.sparkContext.addSparkListener(listener)
     uiTab = if (ss.sqlContext.sparkContext.getConf.getBoolean("spark.ui.enabled", true)) {
       Some(new ThriftServerTab(ss.sqlContext.sparkContext))
@@ -92,11 +92,11 @@ object HiveThriftServer2 extends Logging {
       SparkSQLEnv.sqlContext.sessionState.newHadoopConf())
 
     try {
-      val server = new HiveThriftServer2(ss)
+      val server = new HiveThriftServer2Seq(ss)
       server.init(executionHive.conf)
       server.start()
       logInfo("HiveThriftServer2 started")
-      listener = new HiveThriftServer2Listener(server, SparkSQLEnv.sqlContext.conf)
+      listener = new HiveThriftServer2ListenerSeq(server, SparkSQLEnv.sqlContext.conf)
       SparkSQLEnv.sparkContext.addSparkListener(listener)
       uiTab = if (SparkSQLEnv.sparkContext.getConf.getBoolean("spark.ui.enabled", true)) {
         Some(new ThriftServerTab(SparkSQLEnv.sparkContext))
@@ -161,7 +161,7 @@ object HiveThriftServer2 extends Logging {
   /**
     * An inner sparkListener called in sc.stop to clean up the HiveThriftServer2
     */
-  class HiveThriftServer2Listener(
+  class HiveThriftServer2ListenerSeq(
                                                          val server: HiveServer2,
                                                          val conf: SQLConf) extends SparkListener {
 
@@ -271,7 +271,7 @@ object HiveThriftServer2 extends Logging {
   }
 }
 
-private[hive] class HiveThriftServer2(ss: SequilaSession)
+private[hive] class HiveThriftServer2Seq(ss: SequilaSession)
   extends HiveServer2
     with ReflectedCompositeService {
   // state is tracked internally so that the server only attempts to shut down if it successfully
@@ -279,7 +279,7 @@ private[hive] class HiveThriftServer2(ss: SequilaSession)
   private val started = new AtomicBoolean(false)
 
   override def init(hiveConf: HiveConf) {
-    val sparkSqlCliService = new SparkSQLCLIService(this, ss)
+    val sparkSqlCliService = new SparkSQLCLIServiceSeq(this, ss)
     setSuperField(this, "cliService", sparkSqlCliService)
     addService(sparkSqlCliService)
 

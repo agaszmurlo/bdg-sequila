@@ -39,7 +39,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.util.{Utils => SparkUtils}
 import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
 
-private[hive] class SparkExecuteStatementOperation(
+private[hive] class SparkExecuteStatementOperationSeq(
                                                     parentSession: HiveSession,
                                                     statement: String,
                                                     confOverlay: JMap[String, String],
@@ -221,7 +221,7 @@ private[hive] class SparkExecuteStatementOperation(
     val executionHiveClassLoader = ss.sqlContext.sharedState.jarClassLoader
     Thread.currentThread().setContextClassLoader(executionHiveClassLoader)
 
-    HiveThriftServer2.listener.onStatementStart(
+    HiveThriftServer2Seq.listener.onStatementStart(
       statementId,
       parentSession.getSessionHandle.getSessionId.toString,
       statement,
@@ -242,7 +242,7 @@ private[hive] class SparkExecuteStatementOperation(
           logInfo(s"Setting spark.scheduler.pool=$value for future statements in this session.")
         case _ =>
       }
-      HiveThriftServer2.listener.onStatementParsed(statementId, result.queryExecution.toString())
+      HiveThriftServer2Seq.listener.onStatementParsed(statementId, result.queryExecution.toString())
       iter = {
         if (ss.sqlContext.getConf(SQLConf.THRIFTSERVER_INCREMENTAL_COLLECT.key).toBoolean) {
           resultList = None
@@ -259,7 +259,7 @@ private[hive] class SparkExecuteStatementOperation(
           return
         } else {
           setState(OperationState.ERROR)
-          HiveThriftServer2.listener.onStatementError(
+          HiveThriftServer2Seq.listener.onStatementError(
             statementId, e.getMessage, SparkUtils.exceptionString(e))
           throw e
         }
@@ -269,12 +269,12 @@ private[hive] class SparkExecuteStatementOperation(
         val currentState = getStatus().getState()
         logError(s"Error executing query, currentState $currentState, ", e)
         setState(OperationState.ERROR)
-        HiveThriftServer2.listener.onStatementError(
+        HiveThriftServer2Seq.listener.onStatementError(
           statementId, e.getMessage, SparkUtils.exceptionString(e))
         throw new HiveSQLException(e.toString)
     }
     setState(OperationState.FINISHED)
-    HiveThriftServer2.listener.onStatementFinish(statementId)
+    HiveThriftServer2Seq.listener.onStatementFinish(statementId)
   }
 
   override def cancel(): Unit = {
