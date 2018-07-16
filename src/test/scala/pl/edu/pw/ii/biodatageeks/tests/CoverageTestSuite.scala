@@ -54,7 +54,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
   test("BAM - bdg_coveragee"){
     val session: SparkSession = SequilaSession(spark)
     session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
-    assert(session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878') WHERE start >=20204 AND `end`<= 20204 ").first().getShort(4)===1019.toShort)
+    assert(session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878') WHERE start >=20204 AND `end`<= 20204 ").first().getShort(3)===1019.toShort)
 
   }
 

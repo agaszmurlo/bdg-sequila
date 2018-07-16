@@ -112,7 +112,7 @@ case class BDGCoveragePlan(plan: LogicalPlan, spark: SparkSession, table:String,
     cov
       .mapPartitions(p=>{
         val proj =  UnsafeProjection.create(schema)
-        p.map(r=>   proj.apply(InternalRow.fromSeq(Seq(UTF8String.fromString(sampleId),
+        p.map(r=>   proj.apply(InternalRow.fromSeq(Seq(/*UTF8String.fromString(sampleId),*/
           UTF8String.fromString(r.contigName),r.start,r.end,r.cov))))
       })
   }

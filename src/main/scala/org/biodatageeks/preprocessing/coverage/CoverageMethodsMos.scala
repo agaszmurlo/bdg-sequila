@@ -119,7 +119,7 @@ object CoverageMethodsMos {
           }
           i+= 1
         }
-        result.take(ind)
+        result.take(ind).iterator
       })
     }.flatMap(r=>r)
   }

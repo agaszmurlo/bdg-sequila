@@ -236,7 +236,7 @@ case class CoverageHist(tableName:String,
 object BDGCoverage {
   def apply(tableName:String, sampleId:String): BDGCoverage = {
     val output = StructType(Seq(
-      StructField("sampleId", StringType, nullable = false),
+      //StructField("sampleId", StringType, nullable = false),
       StructField("contigName",StringType,nullable = true),
       StructField("start",IntegerType,nullable = false),
       StructField("end",IntegerType,nullable = false),
@@ -257,7 +257,7 @@ case class BDGCoverage(tableName:String, sampleId:String,
 
   def toSQL(): String = {
 
-    s"SELECT sampleId,contigName,start,end,coverage AS `${output.head.name}` FROM bdg_coverage('$tableName')"
+    s"SELECT contigName,start,end,coverage AS `${output.head.name}` FROM bdg_coverage('$tableName')"
   }
 
   override def newInstance(): BDGCoverage = copy(output = output.map(_.newInstance()))
