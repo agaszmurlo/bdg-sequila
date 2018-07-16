@@ -98,6 +98,11 @@ case class BDGCoveragePlan(plan: LogicalPlan, spark: SparkSession, table:String,
       .dropRight(1) ++ Array(s"${sampleId}*.bam"))
       .mkString("/")
     println(samplePath)
+    spark
+      .sparkContext
+      .hadoopConfiguration
+      .setInt("mapred.min.split.size", (134217728).toInt)
+
     lazy val alignments = spark.sparkContext
       .newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat](samplePath)
     //val cov = ds.rdd.baseCoverage(None,Some(4),sorted=false)

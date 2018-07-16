@@ -1,8 +1,11 @@
 package org.biodatageeks.preprocessing.coverage
 
-import htsjdk.samtools.CigarOperator
+import htsjdk.samtools.{CigarOperator, ValidationStringency}
+import org.apache.hadoop.io.LongWritable
 import org.apache.spark.rdd.RDD
-import org.seqdoop.hadoop_bam.SAMRecordWritable
+import org.apache.spark.sql.SparkSession
+import org.seqdoop.hadoop_bam.{AnySAMInputFormat, BAMInputFormat, SAMRecordWritable}
+import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 
 import scala.collection.mutable
 
@@ -28,30 +31,29 @@ object CoverageMethodsMos {
     (c, lowerBound, lowerBound + c.length, a._4)
   }
 
+  @inline def eventOp(pos:Int, startPart:Int, contig:String, contigEventsMap:mutable.HashMap[String,(Array[Short],Int,Int,Int)], incr:Boolean) ={
+
+    val position = pos - startPart
+    if(incr)
+      contigEventsMap(contig)._1(position) = (contigEventsMap(contig)._1(position) + 1).toShort
+    else
+      contigEventsMap(contig)._1(position) = (contigEventsMap(contig)._1(position) - 1).toShort
+  }
+
   def readsToEventsArray(reads:RDD[SAMRecordWritable])   = {
     reads.mapPartitions{
       p =>
-
-        def eventOp(pos:Int, startPart:Int, contig:String, contigEventsMap:mutable.HashMap[String,(Array[Short],Int,Int,Int)], incr:Boolean) ={
-
-          val position = pos - startPart
-          if(incr)
-            contigEventsMap(contig)._1(position) = (contigEventsMap(contig)._1(position) + 1).toShort
-          else
-            contigEventsMap(contig)._1(position) = (contigEventsMap(contig)._1(position) - 1).toShort
-        }
-
         val contigLengthMap = new mutable.HashMap[String, Int]()
         val contigEventsMap = new mutable.HashMap[String, (Array[Short],Int,Int,Int)]()
         val contigStartStopPartMap = new mutable.HashMap[(String),Int]()
-        var lastContig: String = null
-        var lastPosition = 0
+        //var lastContig: String = null
+        //var lastPosition = 0
         while(p.hasNext){
           val r = p.next()
           val read = r.get()
           val contig = read.getContig
           if(contig != null && read.getFlags!= 1796) {
-            if (!contigLengthMap.contains(contig)) {
+            if (!contigLengthMap.contains(contig)) { //FIXME: preallocate basing on header, n
               val contigLength = read.getHeader.getSequence(contig).getSequenceLength
               //println(s"${contig}:${contigLength}:${read.getStart}")
               contigLengthMap += contig -> contigLength
@@ -60,13 +62,13 @@ object CoverageMethodsMos {
             }
             val cigarIterator = read.getCigar.iterator()
             var position = read.getStart
-            val contigLength = contigLengthMap(contig)
+            //val contigLength = contigLengthMap(contig)
             while(cigarIterator.hasNext){
               val cigarElement = cigarIterator.next()
               val cigarOpLength = cigarElement.getLength
               val cigarOp = cigarElement.getOperator
               if (cigarOp == CigarOperator.M || cigarOp == CigarOperator.X || cigarOp == CigarOperator.EQ) {
-                eventOp(position,contigStartStopPartMap(s"${contig}_start"),contig,contigEventsMap,true)
+                eventOp(position,contigStartStopPartMap(s"${contig}_start"),contig,contigEventsMap,true) //Fixme: use variable insteaad of lookup to a map
                 position += cigarOpLength
                 eventOp(position,contigStartStopPartMap(s"${contig}_start"),contig,contigEventsMap,false)
               }
@@ -92,8 +94,8 @@ object CoverageMethodsMos {
   }
 
   def eventsToCoverage(sampleId:String,events: RDD[(String,(Array[Short],Int,Int,Int))]) = {
-    events.mapPartitions{
-      p => p.map(r=>{
+    events
+      .mapPartitions{ p => p.map(r=>{
         val contig = r._1
         val covArrayLength = r._2._1.length
         var cov = 0
@@ -117,8 +119,81 @@ object CoverageMethodsMos {
           }
           i+= 1
         }
-        result.filter(_!=null).iterator
+        result.take(ind)
       })
     }.flatMap(r=>r)
   }
+
+
+  def main(args: Array[String]): Unit = {
+    val spark = SparkSession.builder()
+     // .master("local[1]")
+     // .config("spark.driver.memory", "8g")
+      .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+      .getOrCreate()
+
+    spark
+      .sparkContext
+      .hadoopConfiguration
+      .set(SAMHeaderReader.VALIDATION_STRINGENCY_PROPERTY, ValidationStringency.LENIENT.toString)
+    spark
+      .sparkContext
+      .hadoopConfiguration
+      .setInt("mapred.min.split.size", (134217728).toInt)
+
+    //spark.sparkContext.setLogLevel("INFO")
+    lazy val alignments = spark.sparkContext
+     // .newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat]("/Users/marek//Downloads/data/NA12878.ga2.exome.maq.recal.bam")
+    .newAPIHadoopFile[LongWritable, SAMRecordWritable,BAMInputFormat]("/Users/marek/data/NA12878.chrom20.ILLUMINA.bwa.CEU.low_coverage.20121211.bam")
+
+    lazy val events = readsToEventsArray(alignments.map(r => r._2))
+    spark.time {
+      println(alignments.count)
+    }
+    spark.time {
+
+      //println(events.count)
+    }
+
+    //lazy val combinedRes = combineEvents(events)
+    lazy val coverage = eventsToCoverage("test", events)
+    spark.time {
+     //println(coverage.count())
+
+    }
+
+    val size = 100000000
+    val a = new Array[Short](size)
+    spark.time{
+
+      var i = 0
+      while(i < a.length){
+        a(i) = 1.toShort
+        i += 1
+      }
+    }
+
+    spark.time{
+
+     for(i<- 0 to a.length -1 )
+        a(i) = 1.toShort
+      }
+
+    val map = new mutable.HashMap[String,Int]()
+    map += ("test" -> 0)
+    map += ("test2" -> 0)
+    map += ("test3" -> 0)
+    var i = 0
+    spark.time{
+      while(i < a.length){
+         map("test") =  map("test") + 1
+        i+=1
+      }
+
+    }
+
+
+  }
+
+
 }
