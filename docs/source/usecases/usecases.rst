@@ -12,11 +12,18 @@ Dataset (20 samples) was downloaded from 1000 genomes project (ftp://ftp.1000gen
 
 --------------------------------------
 
+Run bdg-sequilaR docker 
+***************************
+
 .. code-block:: bash
 
     docker pull biodatageeks/|project_name|:|version|
     docker run -e USERID=$UID -e GROUPID=$(id -g) -it -v /data/samples/1000genomes/:/data \
     -p 4041:4040 biodatageeks/|project_name|:|version| bdg-sequilaR
+
+
+Download input data, install and load R libraries
+***************************
 
 .. code-block:: R
 
@@ -56,9 +63,10 @@ Dataset (20 samples) was downloaded from 1000 genomes project (ftp://ftp.1000gen
     download.file("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/refFlat.txt.gz", paste0(dataDir, "refFlat.txt.gz"))
     system( paste0("gunzip ",dataDir, "refFlat.txt.gz"))
 
-::
-    Load data to SeQuiLa
-     
+
+Load input data to SeQuiLa
+***************************
+
 .. code-block:: R     
      
     # Overwrite sequila_connect to request more cores and increase driver-memory
@@ -79,7 +87,7 @@ Dataset (20 samples) was downloaded from 1000 genomes project (ftp://ftp.1000gen
     }
 
     # Connect to SeQuiLa
-    ss <- sequila_connect("local[20]")
+    ss <- sequila_connect("local[20]")Run bdg-sequilaR docker 
 
     #create db
     sequila_sql(ss,query="CREATE DATABASE sequila")
@@ -116,9 +124,10 @@ Dataset (20 samples) was downloaded from 1000 genomes project (ftp://ftp.1000gen
     USING csv
     OPTIONS (path "/data/20130108.exome.targets.bed", header "false", inferSchema "false", delimiter "\t")')
 
-sequila_sql(ss, query= "select * from targets limit 10")
+    sequila_sql(ss, query= "select * from targets limit 10")
 
 .. code-block:: bash
+
     # Source:   table<test> [?? x 4]
     # Database: spark_connection
     Chr    Start    End v1   
@@ -169,11 +178,11 @@ Count the number of reads per target using SeQuiLa
 
 
 
-
 Run CODEX
 ***************************
 
 .. code-block:: R
+
     # Transform read count data to matrix
     chr <- "20"
     readCountPerTarget$key <- paste0(readCountPerTarget$Chr, ":", readCountPerTarget$Start, "_", readCountPerTarget$End)
