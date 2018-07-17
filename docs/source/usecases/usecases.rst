@@ -34,7 +34,6 @@ Download input data, install and load R libraries
     new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
     if(length(new.packages)) install.packages(new.packages)
 
-
     # Install missing packages from Bioconductor
     biocLitePackages <- c("CODEX") 
     new.biocLitePackage <- biocLitePackages[!(biocLitePackages %in% installed.packages()[,"Package"])]
@@ -44,23 +43,28 @@ Download input data, install and load R libraries
     library(sequila); library(parallel); library(data.table); library(reshape); library(dplyr); library(CODEX)
 
     # Download data
-    mc.cores=4
+    mc.cores=20
     sampleNames <- paste0("HG0",c(1840:1853,1855,1857:1861))
     mclapply(sampleNames, function(sampleName){
     if (sampleName %in% c("HG01860", "HG01861")){
     download.file(paste0("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data/",
-                        sampleName,"/exome_alignment/",sampleName,".chrom20.ILLUMINA.bwa.KHV.exome.20121211.bam"), 
+                        sampleName,"/exome_alignment/",
+                        sampleName,".chrom20.ILLUMINA.bwa.KHV.exome.20121211.bam"), 
                         paste0(dataDir,sampleName, ".bam"))}
-    else{ download.file(paste0("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data/",sampleName,"/exome_alignment/",
-                                sampleName,".chrom20.ILLUMINA.bwa.KHV.exome.20120522.bam"), paste0(dataDir,sampleName, ".bam"))}
+    else{ download.file(paste0("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data/",
+                        sampleName,"/exome_alignment/",
+                        sampleName,".chrom20.ILLUMINA.bwa.KHV.exome.20120522.bam"), 
+                        paste0(dataDir,sampleName, ".bam"))}
     
     }, mc.cores=mc.cores)
     
     # Download exome capture targets
-    download.file("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/exome_pull_down_targets/20130108.exome.targets.bed", paste0(dataDir,"20130108.exome.targets.bed" ) )
+    download.file("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/exome_pull_down_targets/20130108.exome.targets.bed", 
+                    paste0(dataDir,"20130108.exome.targets.bed" ) )
     
     # Download RefSeq genes track from UCSC
-    download.file("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/refFlat.txt.gz", paste0(dataDir, "refFlat.txt.gz"))
+    download.file("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/refFlat.txt.gz", 
+                    paste0(dataDir, "refFlat.txt.gz"))
     system( paste0("gunzip ",dataDir, "refFlat.txt.gz"))
 
 
@@ -72,18 +76,17 @@ Load input data to SeQuiLa
     # Overwrite sequila_connect to request more cores and increase driver-memory
     sequila_connect <- function (master) 
     {
-    conf <- sequilaEnv$config
-    conf$`sparklyr.cores.local` <- 20
-    conf$`sparklyr.shell.driver-memory` <- "40G"
-    conf$spark.memory.fraction <- 0.9
-    
-    sc <- spark_connect(master = master, config = conf, 
-    version = sequilaEnv$sparkVersion, app_name = "SeQuiLa")
-    session = sparklyr::invoke_static(sc, "org.biodatageeks.R.SequilaR",  "init")
-    ss <- new.env()
-    ss$session <- session
-    ss$sc <- sc
-    ss
+        conf <- sequilaEnv$config
+        conf$`sparklyr.cores.local` <- 20
+        conf$`sparklyr.shell.driver-memory` <- "40G"
+        conf$spark.memory.fraction <- 0.9
+        sc <- spark_connect(master = master, config = conf, 
+        version = sequilaEnv$sparkVersion, app_name = "SeQuiLa")
+        session = sparklyr::invoke_static(sc, "org.biodatageeks.R.SequilaR",  "init")
+        ss <- new.env()
+        ss$session <- session
+        ss$sc <- sc
+        ss
     }
 
     # Connect to SeQuiLa
@@ -151,9 +154,11 @@ Count the number of reads per target using SeQuiLa
 .. code-block:: R
 
     query <- "SELECT SampleId, Chr ,targets.Start ,targets.End ,CAST(targets.End AS INTEGER)-
-    CAST(targets.Start AS INTEGER) + 1 AS Length, count(*) AS Counts FROM reads JOIN targets
-    ON (Chr=reads.contigName AND reads.end >= CAST(targets.Start AS INTEGER)
-    AND reads.start <= CAST(targets.End AS INTEGER)) GROUP BY  SampleId, Chr, targets.Start, targets.End"
+                               CAST(targets.Start AS INTEGER) + 1 AS Length, count(*) AS Counts 
+                FROM reads 
+                JOIN targets ON (Chr=reads.contigName AND reads.end >= CAST(targets.Start AS INTEGER)
+                                                      AND reads.start <= CAST(targets.End AS INTEGER)) 
+                GROUP BY  SampleId, Chr, targets.Start, targets.End"
 
 ::
 
@@ -193,6 +198,8 @@ Run CODEX
     Y <- Y[,-1,with=F] # remove first column (key)
     targets <- data.frame(do.call(rbind, strsplit(keys,"[:_]")), stringsAsFactors=F)
     colnames(targets) <- c("Chr", "Start", "Stop")
+    
+    #Sort targets and Y matrix
     ord <- order(targets$Chr, as.numeric(targets$Start), as.numeric(targets$Stop))
     targets <- targets[ord, ];  Y <- Y [ord, ]
     idx <- which(targets$Chr == chr)
@@ -200,7 +207,7 @@ Run CODEX
     targetsChr <- targets[idx,]
     ref <- IRanges(start = as.numeric(targetsChr$Start), end = as.numeric(targetsChr$Stop))
 
-    #Perform QC
+    #Perform Qualty Control
     gc <- getgc(chr, ref)
     mapp <- getmapp(chr, ref)
     mapp_thresh <- 0.9 # remove exons with mapability < 0.9
@@ -219,7 +226,7 @@ Run CODEX
     Y_qc <- qcObj$Y_qc; sampname_qc <- qcObj$sampname_qc; gc_qc <- qcObj$gc_qc
     mapp_qc <- qcObj$mapp_qc; ref_qc <- qcObj$ref_qc; qcmat <- qcObj$qcmat
 
-    # Normalize            
+    # Normalization           
     normObj <- normalize(Y_qc, gc_qc, K = 1:9)
     Yhat <- normObj$Yhat; AIC <- normObj$AIC; BIC <- normObj$BIC
     RSS <- normObj$RSS; K <- normObj$K
@@ -231,8 +238,72 @@ Run CODEX
     finalcall$targetCount <- as.numeric(finalcall$ed_exon) - as.numeric(finalcall$st_exon)
     finalcall$chr <- paste0("chr", finalcall$chr)
 
-    # Save results
+    # Save results to csv file
     write.csv(finalcall, file="/data/cnv_results.csv", row.names=F, quote=F)
+    
+    
+    # Plot detected CNVs encompassing more than 3 targets (only one duplication found). 
+    plotCall <- function(calls,i , Y_qc, Yhat_opt){
+    startIdx <- as.numeric(calls$st_exon[i])
+    stopIdx <- as.numeric(calls$ed_exon[i])
+    sampleName <- calls$sample_name[i]
+    wd <- 20
+    startPos <- max(1,(startIdx-wd))
+    stopPos <- min((stopIdx+wd), nrow(Y_qc))
+    selQC <- Y_qc[startPos:stopPos,]
+    selQC[selQC ==0] <- 0.00001
+    selYhat <- Yhat_opt[startPos:stopPos,]
+    matplot(matrix(rep(startPos:stopPos, ncol(selQC)), ncol=ncol(selQC)), log(selQC/selYhat,2), type="l",lty=1, col="dimgrey",  lwd=1, xlab="exon nr", ylab="logratio(Y/Yhat)")
+    lines(startPos:stopPos,log( selQC[,sampleName]/ selYhat[,sampleName],2), lwd=3, col="red")
+    }
+
+    
+    plotCall (finalcall, which(finalcall$targetCount > 3), Y_qc, Yhat[[optK]])
+    
+    
+.. figure:: PipelineCNVSeqWithSequila.*
+   :scale: 40%
+   :align: center
+
+Annotate detected CNVs with overlapping genes using SeQuiLa
+***************************
+
+.. code-block:: R
+    
+    # Load detected CNVs into the database
+    sequila_sql(ss,'cnv_results','CREATE TABLE cnv_results 
+                                    USING csv
+                                    OPTIONS (path "/data/cnv_results.csv", header "true", inferSchema "true", delimiter ",")')
+
+                                    
+    
+    # Load gene coordinates (from refFlat file)
+    sequila_sql(ss,'ref_flat','CREATE TABLE ref_flat  (symbol string, id string,chr string, strand string, txstart integer, txend integer, 
+                                                        cdsstart integer, cdsend integer, exonnum integer, exonstarts string, exonends string )
+                                USING csv
+                                OPTIONS (path "/data/refFlat.txt", header "false", inferSchema "false", delimiter "\t")'
+
+                                
+
+    # Find genes overlapping each CNV
+    query1 <- "SELECT sample_name,cnv_results.chr, cnv,st_bp, ed_bp, length_kb, st_exon, ed_exon, raw_cov, norm_cov, copy_no, lratio, mBIC, targetCount, collect_set(symbol) as Genes
+            FROM cnv_results JOIN ref_flat
+                                ON (cnv_results.chr=ref_flat.chr AND ref_flat.txend >= cnv_results.st_bp
+                                AND ref_flat.txstart  <= cnv_results.ed_bp) 
+            GROUP BY sample_name, cnv_results.chr, cnv,st_bp, ed_bp, length_kb, st_exon, ed_exon, raw_cov, norm_cov, copy_no, lratio, mBIC, targetCount"
+
+    annotatedCalls <- data.frame(collect(sequila_sql(ss,'annotatedCalls',query1)))
+    head(annotatedCalls)
+    
+.. code-block:: bash
+
+    sample_name   chr cnv    st_bp    ed_bp length_kb st_exon ed_exon raw_cov norm_cov copy_no  lratio    mBIC targetCount                      Genes
+    1     HG01846 chr20 del  1895652  1902379     6.728     118     119    1663     2553       1 123.879 104.897           1                      SIRPA
+    2     HG01844 chr20 dup  1638233  1896162   257.930     117     118    3328     2304       3 197.332 359.543           1 SIRPA, SIRPG, LOC100289473
+    3     HG01861 chr20 del  1895652  1902379     6.728     118     119    1506     2127       1  19.696  85.584           1                      SIRPA
+    4     HG01858 chr20 del 26061800 26063616     1.817    1229    1230     445      704       1  43.572  23.580           1                    FAM182A
+    5     HG01851 chr20 del  1895652  1902379     6.728     118     119    1344     1913       1  24.977   5.995           1                      SIRPA
+    6     HG01848 chr20 dup  1584562  1592181     7.620     110     111      89       39       5  23.047 942.548           1                     SIRPB1
 
 
 
