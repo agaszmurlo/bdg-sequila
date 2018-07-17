@@ -63,6 +63,7 @@ Contents:
    :maxdepth: 2
    
    architecture/architecture
+   integrations/integrations
    function/function
    quickstart/quickstart
    usecases/usecases
