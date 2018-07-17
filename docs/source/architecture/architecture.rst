@@ -4,12 +4,31 @@ Architecture
 Overview
 #########
 
-The core concept that we have realized in SeQuiLa is changing the join strategy chosen by Spark by default to more efficient one, based on broadcasting interval tree data structure.
+The core concept that we have implemented in SeQuiLa is substituting the join strategy chosen by Spark by default to more efficient one, based on broadcasting interval tree data structure from driver nodes to worker nodes.
 
-The main idea is as follows. Let's assume we have genomic intervals (with three genomic coordinates: `chromosome`, `start position`, `end position`) stored in table A (smaller) and table B (bigger). Let's additionally presume that we have a cluster with one Spark driver, three worker nodes and that the tables are partitioned between worker nodes.
+The main idea is as follows. Let's assume we have genomic intervals (with three genomic coordinates: `chromosome`, `start position`, `end position` and additional annotations) stored in table s1 (smaller) and table s2 (bigger).
+
+.. figure:: structure.*
+    :scale: 80
+
+    Dataset s1 and s2. Both storing genomic intervals with necessary genomic coordinates and optional annotations
+
+Our goal is to efficiently perform query as shown below:
+
+.. code-block:: SQL
+
+    SELECT s2.targetId,count(*)
+    FROM reads s1 JOIN targets s2
+    ON s1.chr=s2.chr
+    AND s1.end>=s2.start
+    AND s1.start<=s2.end
+    GROUP BY targetId;
 
 
-.. figure:: broadcast.*
+Let's additionally presume that we have a cluster with one Spark driver, three worker nodes and that the tables are partitioned between worker nodes.
+
+
+.. figure:: broadcasting.*
 	:scale: 80
 
 	Broadcasting interval forest to worker nodes.
@@ -37,14 +56,7 @@ Our implementation of IntervalTree is based on explanations in [CLR]_ although i
 
 
 
-.. code-block:: SQL
 
-	SELECT s2.targetId,count(*)
-	FROM reads s1 JOIN targets s2
-	ON s1.chr=s2.chr
-	AND s1.end>=s2.start
-	AND s1.start<=s2.end
-	GROUP BY targetId;
 
 
 Rule Based Optimizer
