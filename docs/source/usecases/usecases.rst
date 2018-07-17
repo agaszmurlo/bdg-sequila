@@ -14,80 +14,81 @@ Dataset (20 samples) was downloaded from 1000 genomes project (ftp://ftp.1000gen
 
 .. code-block:: bash
 
-docker pull biodatageeks/|project_name|:|version|
-docker run -e USERID=$UID -e GROUPID=$(id -g) -it -v /data/samples/1000genomes/:/data \
--p 4041:4040 biodatageeks/|project_name|:|version| bdg-sequilaR
+    docker pull biodatageeks/|project_name|:|version|
+    docker run -e USERID=$UID -e GROUPID=$(id -g) -it -v /data/samples/1000genomes/:/data \
+    -p 4041:4040 biodatageeks/|project_name|:|version| bdg-sequilaR
 
 .. code-block:: R
 
-dataDir <- "/data/"
+    dataDir <- "/data/"
 
-# Install missing packages from CRAN
-list.of.packages <- c("parallel", "data.table", "reshape", "dplyr")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
-
-
-# Install missing packages from Bioconductor
-biocLitePackages <- c("CODEX") 
-new.biocLitePackage <- biocLitePackages[!(biocLitePackages %in% installed.packages()[,"Package"])]
-if(length(new.biocLitePackage)) { source("http://bioconductor.org/biocLite.R"); biocLite(new.biocLitePackage)}
-
-# Load packages
-library(sequila); library(parallel); library(data.table); library(reshape); library(dplyr); library(CODEX)
-
-# Download data
-mc.cores=4
-sampleNames <- paste0("HG0",c(1840:1853,1855,1857:1861))
-mclapply(sampleNames, function(sampleName){
- if (sampleName %in% c("HG01860", "HG01861")){
-  download.file(paste0("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data/",
-                       sampleName,"/exome_alignment/",sampleName,".chrom20.ILLUMINA.bwa.KHV.exome.20121211.bam"), 
-                       paste0(dataDir,sampleName, ".bam"))}
-   else{ download.file(paste0("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data/",sampleName,"/exome_alignment/",
-                              sampleName,".chrom20.ILLUMINA.bwa.KHV.exome.20120522.bam"), paste0(dataDir,sampleName, ".bam"))}
- 
-}, mc.cores=mc.cores)
- 
- # Download exome capture targets
- download.file("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/exome_pull_down_targets/20130108.exome.targets.bed", paste0(dataDir,"20130108.exome.targets.bed" ) )
- 
- # Download RefSeq genes track from UCSC
- download.file("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/refFlat.txt.gz", paste0(dataDir, "refFlat.txt.gz"))
- system( paste0("gunzip ",dataDir, "refFlat.txt.gz"))
-
-# Overwrite sequila_connect to request more cores and increase driver-memory
-sequila_connect <- function (master) 
-{
- conf <- sequilaEnv$config
- conf$`sparklyr.cores.local` <- 20
- conf$`sparklyr.shell.driver-memory` <- "40G"
- conf$spark.memory.fraction <- 0.9
- 
- sc <- spark_connect(master = master, config = conf, 
- version = sequilaEnv$sparkVersion, app_name = "SeQuiLa")
- session = sparklyr::invoke_static(sc, "org.biodatageeks.R.SequilaR",  "init")
- ss <- new.env()
- ss$session <- session
- ss$sc <- sc
- ss
-}
-
-# Connect to SeQuiLa
-ss <- sequila_connect("local[20]")
-
-#create db
-sequila_sql(ss,query="CREATE DATABASE sequila")
-sequila_sql(ss,query="USE sequila")
-
-#create a BAM data source with reads
-sequila_sql(ss,'reads','CREATE TABLE reads USING org.biodatageeks.datasources.BAM.BAMDataSource OPTIONS(path "/data/*bam")')
+    # Install missing packages from CRAN
+    list.of.packages <- c("parallel", "data.table", "reshape", "dplyr")
+    new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+    if(length(new.packages)) install.packages(new.packages)
 
 
-# Check out the reads
-sequila_sql(ss, query= "select * from reads limit 10")
+    # Install missing packages from Bioconductor
+    biocLitePackages <- c("CODEX") 
+    new.biocLitePackage <- biocLitePackages[!(biocLitePackages %in% installed.packages()[,"Package"])]
+    if(length(new.biocLitePackage)) { source("http://bioconductor.org/biocLite.R"); biocLite(new.biocLitePackage)}
+
+    # Load packages
+    library(sequila); library(parallel); library(data.table); library(reshape); library(dplyr); library(CODEX)
+
+    # Download data
+    mc.cores=4
+    sampleNames <- paste0("HG0",c(1840:1853,1855,1857:1861))
+    mclapply(sampleNames, function(sampleName){
+    if (sampleName %in% c("HG01860", "HG01861")){
+    download.file(paste0("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data/",
+                        sampleName,"/exome_alignment/",sampleName,".chrom20.ILLUMINA.bwa.KHV.exome.20121211.bam"), 
+                        paste0(dataDir,sampleName, ".bam"))}
+    else{ download.file(paste0("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data/",sampleName,"/exome_alignment/",
+                                sampleName,".chrom20.ILLUMINA.bwa.KHV.exome.20120522.bam"), paste0(dataDir,sampleName, ".bam"))}
+    
+    }, mc.cores=mc.cores)
+    
+    # Download exome capture targets
+    download.file("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/exome_pull_down_targets/20130108.exome.targets.bed", paste0(dataDir,"20130108.exome.targets.bed" ) )
+    
+    # Download RefSeq genes track from UCSC
+    download.file("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/refFlat.txt.gz", paste0(dataDir, "refFlat.txt.gz"))
+    system( paste0("gunzip ",dataDir, "refFlat.txt.gz"))
+
+    # Overwrite sequila_connect to request more cores and increase driver-memory
+    sequila_connect <- function (master) 
+    {
+    conf <- sequilaEnv$config
+    conf$`sparklyr.cores.local` <- 20
+    conf$`sparklyr.shell.driver-memory` <- "40G"
+    conf$spark.memory.fraction <- 0.9
+    
+    sc <- spark_connect(master = master, config = conf, 
+    version = sequilaEnv$sparkVersion, app_name = "SeQuiLa")
+    session = sparklyr::invoke_static(sc, "org.biodatageeks.R.SequilaR",  "init")
+    ss <- new.env()
+    ss$session <- session
+    ss$sc <- sc
+    ss
+    }
+
+    # Connect to SeQuiLa
+    ss <- sequila_connect("local[20]")
+
+    #create db
+    sequila_sql(ss,query="CREATE DATABASE sequila")
+    sequila_sql(ss,query="USE sequila")
+
+    #create a BAM data source with reads
+    sequila_sql(ss,'reads','CREATE TABLE reads USING org.biodatageeks.datasources.BAM.BAMDataSource OPTIONS(path "/data/*bam")')
+
+
+    # Check out the reads
+    sequila_sql(ss, query= "select * from reads limit 10")
 
 .. code-block:: bash
+
 # Source:   table<test> [?? x 10]
 # Database: spark_connection
    sampleId contigName start   end cigar  mapq baseq reference flags materefind
