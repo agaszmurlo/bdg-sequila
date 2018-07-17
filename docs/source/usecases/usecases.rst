@@ -56,6 +56,11 @@ Dataset (20 samples) was downloaded from 1000 genomes project (ftp://ftp.1000gen
     download.file("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/refFlat.txt.gz", paste0(dataDir, "refFlat.txt.gz"))
     system( paste0("gunzip ",dataDir, "refFlat.txt.gz"))
 
+::
+    Load data to SeQuiLa
+     
+.. code-block:: R     
+     
     # Overwrite sequila_connect to request more cores and increase driver-memory
     sequila_connect <- function (master) 
     {
@@ -83,53 +88,52 @@ Dataset (20 samples) was downloaded from 1000 genomes project (ftp://ftp.1000gen
     #create a BAM data source with reads
     sequila_sql(ss,'reads','CREATE TABLE reads USING org.biodatageeks.datasources.BAM.BAMDataSource OPTIONS(path "/data/*bam")')
 
-
     # Check out the reads
     sequila_sql(ss, query= "select * from reads limit 10")
 
 .. code-block:: bash
 
-# Source:   table<test> [?? x 10]
-# Database: spark_connection
-   sampleId contigName start   end cigar  mapq baseq reference flags materefind
-   <chr>    <chr>      <int> <int> <chr> <int> <chr> <chr>     <int>      <int>
- 1 HG01840  20         60123 60212 90M      60 9BEB~ 20           99         19
- 2 HG01840  20         60206 60273 68M2~    60 989E~ 20           99         19
- 3 HG01840  20         60260 60349 90M      60 B>C=~ 20          147         19
- 4 HG01840  20         60297 60386 90M      60 ;C?>~ 20          147         19
- 5 HG01840  20         60687 60776 90M      60 :E=G~ 20           99         19
- 6 HG01840  20         60780 60869 90M      60 9@C?~ 20          163         19
- 7 HG01840  20         60841 60930 90M      29 9=>E~ 20          163         19
- 8 HG01840  20         60843 60932 90M      60 9C8D~ 20           99         19
- 9 HG01840  20         60882 60971 90M      60 9B@@~ 20           99         19
-10 HG01840  20         60889 60959 19S7~    29 8<A6~ 20           99         19
-# ... with more rows
+    # Source:   table<test> [?? x 10]
+    # Database: spark_connection
+    sampleId contigName start   end cigar  mapq baseq reference flags materefind
+    <chr>    <chr>      <int> <int> <chr> <int> <chr> <chr>     <int>      <int>
+    1 HG01840  20         60123 60212 90M      60 9BEB~ 20           99         19
+    2 HG01840  20         60206 60273 68M2~    60 989E~ 20           99         19
+    3 HG01840  20         60260 60349 90M      60 B>C=~ 20          147         19
+    4 HG01840  20         60297 60386 90M      60 ;C?>~ 20          147         19
+    5 HG01840  20         60687 60776 90M      60 :E=G~ 20           99         19
+    6 HG01840  20         60780 60869 90M      60 9@C?~ 20          163         19
+    7 HG01840  20         60841 60930 90M      29 9=>E~ 20          163         19
+    8 HG01840  20         60843 60932 90M      60 9C8D~ 20           99         19
+    9 HG01840  20         60882 60971 90M      60 9B@@~ 20           99         19
+    10 HG01840  20         60889 60959 19S7~    29 8<A6~ 20           99         19
+    # ... with more rows
 
 .. code-block:: R
 
-#create a table with target data 
-sequila_sql(ss,'targets','CREATE TABLE targets (Chr string, Start integer,End integer, v1 string)
- USING csv
- OPTIONS (path "/data/20130108.exome.targets.bed", header "false", inferSchema "false", delimiter "\t")')
+    #create a table with target data 
+    sequila_sql(ss,'targets','CREATE TABLE targets (Chr string, Start integer,End integer, v1 string)
+    USING csv
+    OPTIONS (path "/data/20130108.exome.targets.bed", header "false", inferSchema "false", delimiter "\t")')
 
 sequila_sql(ss, query= "select * from targets limit 10")
 
 .. code-block:: bash
-# Source:   table<test> [?? x 4]
-# Database: spark_connection
-   Chr    Start    End v1   
-   <chr>  <int>  <int> <chr>
- 1 1      14642  14882 NA   
- 2 1      14943  15063 NA   
- 3 1      15751  15990 NA   
- 4 1      16599  16719 NA   
- 5 1      16834  17074 NA   
- 6 1      17211  17331 NA   
- 7 1      30275  30431 NA   
- 8 1      69069  70029 NA   
- 9 1     129133 129253 NA   
-10 1     228233 228354 NA   
-# ... with more rows
+    # Source:   table<test> [?? x 4]
+    # Database: spark_connection
+    Chr    Start    End v1   
+    <chr>  <int>  <int> <chr>
+    1 1      14642  14882 NA   
+    2 1      14943  15063 NA   
+    3 1      15751  15990 NA   
+    4 1      16599  16719 NA   
+    5 1      16834  17074 NA   
+    6 1      17211  17331 NA   
+    7 1      30275  30431 NA   
+    8 1      69069  70029 NA   
+    9 1     129133 129253 NA   
+    10 1     228233 228354 NA   
+    # ... with more rows
 
 
 Count the number of reads per target using SeQuiLa
@@ -137,10 +141,10 @@ Count the number of reads per target using SeQuiLa
 
 .. code-block:: R
 
-query <- "SELECT SampleId, Chr ,targets.Start ,targets.End ,CAST(targets.End AS INTEGER)-
-CAST(targets.Start AS INTEGER) + 1 AS Length, count(*) AS Counts FROM reads JOIN targets
-ON (Chr=reads.contigName AND reads.end >= CAST(targets.Start AS INTEGER)
-AND reads.start <= CAST(targets.End AS INTEGER)) GROUP BY  SampleId, Chr, targets.Start, targets.End"
+    query <- "SELECT SampleId, Chr ,targets.Start ,targets.End ,CAST(targets.End AS INTEGER)-
+    CAST(targets.Start AS INTEGER) + 1 AS Length, count(*) AS Counts FROM reads JOIN targets
+    ON (Chr=reads.contigName AND reads.end >= CAST(targets.Start AS INTEGER)
+    AND reads.start <= CAST(targets.End AS INTEGER)) GROUP BY  SampleId, Chr, targets.Start, targets.End"
 
 ::
 
@@ -148,79 +152,78 @@ AND reads.start <= CAST(targets.End AS INTEGER)) GROUP BY  SampleId, Chr, target
      
 .. code-block:: R
 
-# Collect results
-res <- sequila_sql(ss,'results',query)
-readCountPerTarget <-  collect(res)
-head(readCountPerTarget)
+    # Collect results
+    res <- sequila_sql(ss,'results',query)
+    readCountPerTarget <-  collect(res)
+    head(readCountPerTarget)
 
 .. code-block:: bash
 
-   SampleId Chr  Start    End Length Counts
-1:  HG01840   1  14642  14882    241      3
-2:  HG01840   1 741165 741285    121    395
-3:  HG01840   1 881703 881973    271    183
-4:  HG01840   1 897196 897436    241     67
-5:  HG01840   1 898040 898310    271     32
-6:  HG01840   1 901892 902012    121     55
+    SampleId Chr  Start    End Length Counts
+    1:  HG01840   1  14642  14882    241      3
+    2:  HG01840   1 741165 741285    121    395
+    3:  HG01840   1 881703 881973    271    183
+    4:  HG01840   1 897196 897436    241     67
+    5:  HG01840   1 898040 898310    271     32
+    6:  HG01840   1 901892 902012    121     55
 
-
-.. code-block:: R
 
 
 
 Run CODEX
 ***************************
 
-# Transform read count data to matrix
-chr <- "20"
-readCountPerTarget$key <- paste0(readCountPerTarget$Chr, ":", readCountPerTarget$Start, "_", readCountPerTarget$End)
-Y <- dcast(data.table(readCountPerTarget), key ~ SampleId, value.var="Counts")
-Y[is.na(Y)] <- 1 
-rownames(Y) <- 1:nrow(Y)
-keys <- Y$key 
-Y <- Y[,-1,with=F] # remove first column (key)
-targets <- data.frame(do.call(rbind, strsplit(keys,"[:_]")), stringsAsFactors=F)
-colnames(targets) <- c("Chr", "Start", "Stop")
-ord <- order(targets$Chr, as.numeric(targets$Start), as.numeric(targets$Stop))
-targets <- targets[ord, ];  Y <- Y [ord, ]
-idx <- which(targets$Chr == chr)
-Y <- as.matrix(Y[idx,])
-targetsChr <- targets[idx,]
-ref <- IRanges(start = as.numeric(targetsChr$Start), end = as.numeric(targetsChr$Stop))
+.. code-block:: R
+    # Transform read count data to matrix
+    chr <- "20"
+    readCountPerTarget$key <- paste0(readCountPerTarget$Chr, ":", readCountPerTarget$Start, "_", readCountPerTarget$End)
+    Y <- dcast(data.table(readCountPerTarget), key ~ SampleId, value.var="Counts")
+    Y[is.na(Y)] <- 1 
+    rownames(Y) <- 1:nrow(Y)
+    keys <- Y$key 
+    Y <- Y[,-1,with=F] # remove first column (key)
+    targets <- data.frame(do.call(rbind, strsplit(keys,"[:_]")), stringsAsFactors=F)
+    colnames(targets) <- c("Chr", "Start", "Stop")
+    ord <- order(targets$Chr, as.numeric(targets$Start), as.numeric(targets$Stop))
+    targets <- targets[ord, ];  Y <- Y [ord, ]
+    idx <- which(targets$Chr == chr)
+    Y <- as.matrix(Y[idx,])
+    targetsChr <- targets[idx,]
+    ref <- IRanges(start = as.numeric(targetsChr$Start), end = as.numeric(targetsChr$Stop))
 
-#Perform QC
-gc <- getgc(chr, ref)
-mapp <- getmapp(chr, ref)
-mapp_thresh <- 0.9 # remove exons with mapability < 0.9
-cov_thresh_from <- 20 # remove exons covered by less than 20 reads
-cov_thresh_to <- 4000 #  remove exons covered by more than 4000 reads
-length_thresh_from <- 20 # remove exons of size < 20
-length_thresh_to <- 2000 # remove exons of size > 2000
-gc_thresh_from <- 20 # remove exons with GC < 20
-gc_thresh_to <- 80 # or GC > 80
-sampname <- colnames(Y)
-qcObj <- qc(Y, sampname, chr, ref, mapp, gc, 
-            cov_thresh = c(cov_thresh_from, cov_thresh_to), 
-            length_thresh = c(length_thresh_from, length_thresh_to), 
-            mapp_thresh = mapp_thresh, 
-            gc_thresh = c(gc_thresh_from, gc_thresh_to))
-Y_qc <- qcObj$Y_qc; sampname_qc <- qcObj$sampname_qc; gc_qc <- qcObj$gc_qc
-mapp_qc <- qcObj$mapp_qc; ref_qc <- qcObj$ref_qc; qcmat <- qcObj$qcmat
+    #Perform QC
+    gc <- getgc(chr, ref)
+    mapp <- getmapp(chr, ref)
+    mapp_thresh <- 0.9 # remove exons with mapability < 0.9
+    cov_thresh_from <- 20 # remove exons covered by less than 20 reads
+    cov_thresh_to <- 4000 #  remove exons covered by more than 4000 reads
+    length_thresh_from <- 20 # remove exons of size < 20
+    length_thresh_to <- 2000 # remove exons of size > 2000
+    gc_thresh_from <- 20 # remove exons with GC < 20
+    gc_thresh_to <- 80 # or GC > 80
+    sampname <- colnames(Y)
+    qcObj <- qc(Y, sampname, chr, ref, mapp, gc, 
+                cov_thresh = c(cov_thresh_from, cov_thresh_to), 
+                length_thresh = c(length_thresh_from, length_thresh_to), 
+                mapp_thresh = mapp_thresh, 
+                gc_thresh = c(gc_thresh_from, gc_thresh_to))
+    Y_qc <- qcObj$Y_qc; sampname_qc <- qcObj$sampname_qc; gc_qc <- qcObj$gc_qc
+    mapp_qc <- qcObj$mapp_qc; ref_qc <- qcObj$ref_qc; qcmat <- qcObj$qcmat
 
-# Normalize            
-normObj <- normalize(Y_qc, gc_qc, K = 1:9)
-Yhat <- normObj$Yhat; AIC <- normObj$AIC; BIC <- normObj$BIC
-RSS <- normObj$RSS; K <- normObj$K
-optK=which.max(BIC)
+    # Normalize            
+    normObj <- normalize(Y_qc, gc_qc, K = 1:9)
+    Yhat <- normObj$Yhat; AIC <- normObj$AIC; BIC <- normObj$BIC
+    RSS <- normObj$RSS; K <- normObj$K
+    optK=which.max(BIC)
 
-# Segmentation
-finalcall <- CODEX::segment(Y_qc, Yhat, optK = optK, K = K, sampname_qc,   ref_qc, chr, lmax = 200, mode = "integer")
-finalcall <- data.frame(finalcall, stringsAsFactors=F)
-finalcall$targetCount <- as.numeric(finalcall$ed_exon) - as.numeric(finalcall$st_exon)
-finalcall$chr <- paste0("chr", finalcall$chr)
+    # Segmentation
+    finalcall <- CODEX::segment(Y_qc, Yhat, optK = optK, K = K, sampname_qc,   ref_qc, chr, lmax = 200, mode = "integer")
+    finalcall <- data.frame(finalcall, stringsAsFactors=F)
+    finalcall$targetCount <- as.numeric(finalcall$ed_exon) - as.numeric(finalcall$st_exon)
+    finalcall$chr <- paste0("chr", finalcall$chr)
 
-# Save results
-write.csv(finalcall, file="/data/cnv_results.csv", row.names=F, quote=F)
+    # Save results
+    write.csv(finalcall, file="/data/cnv_results.csv", row.names=F, quote=F)
 
 
 
