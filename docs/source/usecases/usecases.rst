@@ -10,6 +10,8 @@ DNA-seq analysis
 Analysis of Whole Exome Sequencing data to detect Copy Number Variants using SeQuiLa and CODEX (https://www.bioconductor.org/packages/devel/bioc/html/CODEX.html).
 Dataset (20 samples) was downloaded from 1000 genomes project (ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data/).
 
+--------------------------------------
+
 .. code-block:: bash
 
 docker pull biodatageeks/|project_name|:|version|
