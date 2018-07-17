@@ -130,8 +130,6 @@ Once started you should be able to see you bdg-shell app in YARN web UI:
     Please note that all options including resource management can be set in exactly the same way for all SeQuiLa's apps including: bdg-shell, sequilaR and featureCounts.
 
 
-Existing apps
-################
+Integration existing apps
+##########################
 
-Ad-hoc analysis
-#################
