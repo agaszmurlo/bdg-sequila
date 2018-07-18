@@ -104,9 +104,32 @@ Create new Alias:
 
 Running on YARN
 ################
+Running SeQuiLa tools on non-kerberized(not secured) Hadoop cluster is pretty straighforward:
 
-Existing apps
-################
+.. code-block:: bash
 
-Ad-hoc analysis
-#################
+    #create a home dir for bdgeek user on HDFS
+    sudo -u hdfs hadoop fs -mkdir /user/bdgeek
+    sudo -u hdfs hadoop fs -chown -R bdgeek:bdgeek   /user/bdgeek
+
+    #run bdg-shell with 2 executors
+    docker run --rm --network=host -v /etc/hadoop/conf:/etc/hadoop/conf \
+    -e USERID=$UID -e GROUPID=$(id -g) -p 4040:4040 \
+    -t biodatageeks/|project_name|:|version| bdg-shell \
+    --master yarn-client --num-executors 2 --executor-memory 2g --driver-memory 2g
+
+
+Once started you should be able to see you bdg-shell app in YARN web UI:
+
+.. figure:: yarn.*
+    :align: center
+
+.. note::
+
+    For detailed instructions on how to deploy Apache Spark applications on YARN  please check this `page <https://spark.apache.org/docs/latest/submitting-applications.html>`_.
+    Please note that all options including resource management can be set in exactly the same way for all SeQuiLa's apps including: bdg-shell, sequilaR and featureCounts.
+
+
+Integration existing apps
+##########################
+
