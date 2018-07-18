@@ -81,10 +81,8 @@ Load input data to SeQuiLa
      
     #Set Spark parameters and connect
     driver_mem <- "40g"
-    executor_mem <- "2g"
-    executor_num <- "20"
     master <- "local[20]"
-    ss<-sequila_connect(master,driver_memory<-driver_mem, executor_memory <- executor_mem, executor_num <- executor_num)
+    ss<-sequila_connect(master,driver_memory<-driver_mem)
 
     #create db
     sequila_sql(ss,query="CREATE DATABASE sequila")
