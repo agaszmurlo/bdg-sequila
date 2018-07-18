@@ -79,24 +79,12 @@ Load input data to SeQuiLa
 
 .. code-block:: R     
      
-    # Overwrite sequila_connect to request more cores and increase driver-memory
-    sequila_connect <- function (master) 
-    {
-        conf <- sequilaEnv$config
-        conf$`sparklyr.cores.local` <- 20
-        conf$`sparklyr.shell.driver-memory` <- "40G"
-        conf$spark.memory.fraction <- 0.9
-        sc <- spark_connect(master = master, config = conf, 
-        version = sequilaEnv$sparkVersion, app_name = "SeQuiLa")
-        session = sparklyr::invoke_static(sc, "org.biodatageeks.R.SequilaR",  "init")
-        ss <- new.env()
-        ss$session <- session
-        ss$sc <- sc
-        ss
-    }
-
-    # Connect to SeQuiLa
-    ss <- sequila_connect("local[20]")Run bdg-sequilaR docker 
+    #Set Spark parameters and connect
+    driver_mem <- "40g"
+    executor_mem <- "2g"
+    executor_num <- "20"
+    master <- "local[20]"
+    ss<-sequila_connect(master,driver_memory<-driver_mem, executor_memory <- executor_mem, executor_num <- executor_num)
 
     #create db
     sequila_sql(ss,query="CREATE DATABASE sequila")
