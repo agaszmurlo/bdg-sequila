@@ -65,21 +65,39 @@ you may want to add an additional constraint to join condition so as to find onl
 Using UDFs
 ##########
 
-SeQuiLa introduces several UserDefinedFunctions. 
+SeQuiLa introduces several UserDefinedFunctions.
 
-shift
-******
+If using in Scala outside bdg-shell then you need first register the UDFs as follows:
+
+.. code-block:: scala
+
+    import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
+    import org.apache.spark.sql.SequilaSession
+    val ss = new SequilaSession(spark)
+    SequilaRegister.register(ss)
+    UDFRegister.register(ss)
+
+
+Then using them is straightforward:
+
+.. code-block:: scala
+
+    val query = "SELECT ..."
+    ss
+    .sql(query)
+    .show
+
+bdg_shift
+*********
 
 Shift function is performing operation of shifting the ranges by
 a specified number of positions. To use the function within query it needs to be registered. Sample query using shift function:
 
 ::
 
-   spark.sqlContext.udf.register("shift", RangeMethods.shift _)
-
     val query =
      s"""
-       |SELECT start, end, shift(start,end,5) as shiftedInterval FROM ref
+       |SELECT start, end, bdg_shift(start,end,5) as shiftedInterval FROM ref
       """.stripMargin
 
 It returns range with start and end fields.
@@ -96,30 +114,26 @@ It returns range with start and end fields.
 
 .. highlight:: console
 
-resize
-*******
+bdg_resize
+**********
 
 Resize function is performing operation of extending the range by specified width.
 It returns range with start and end fields. Sample query using resize function:
 
 ::
 
-   spark.sqlContext.udf.register("resize", RangeMethods.resize _)
-
     val query =
      s"""
-        |SELECT start, end, resize(start,end,5,"center") as resizedInterval FROM ref
+        |SELECT start, end, bdg_resize(start,end,5,"center") as resizedInterval FROM ref
       """.stripMargin
 
-calcOverlap
-************
+bdg_overlaplength
+*****************
 
 calcOverlap function returns the width of overlap between intervals.
 To use the function within query it needs to be registered. Sample query using overlaplength function:
 
 ::
-
-   spark.sqlContext.udf.register("overlaplength", RangeMethods.calcOverlap _)
 
    val query =
      s"""
@@ -130,13 +144,13 @@ To use the function within query it needs to be registered. Sample query using o
        |AND
        |reads.start<= targets.end
        | AND
-       |overlaplength(reads.start,reads.end,targets.start,targets.end)>=10
+       |bdg_overlaplength(reads.start,reads.end,targets.start,targets.end)>=10
        |)
        |
          """.stripMargin
 
-flank
-*******
+bdg_flank
+*********
 
 Flank function is performing operation of calculating the flanking range with specified width. F
 irst boolean argument indicates whether flanking should be performed from start of range (true) or end (false).
@@ -145,46 +159,40 @@ In that case width of flanking range is doubled. Flank function returns range wi
 
 ::
 
-   spark.sqlContext.udf.register("flank", RangeMethods.flank _)
-
     val query =
       s"""
-        |SELECT start, end, flank(start,end,5,true,true) as flankedInterval FROM ref
+        |SELECT start, end, bdg_flank(start,end,5,true,true) as flankedInterval FROM ref
        """.stripMargin
    
-promoters
-*********
+bdg_promoters
+*************
 
 Promoters function is performing operation of calculating promoter for the range with given upstream and downstream.
 It returns range with start and end fields. Sample query using promoters function:
 
 ::
 
-    spark.sqlContext.udf.register("promoters", RangeMethods.promoters _)
-
     val query =
       s"""
-        |SELECT start, end, promoters(start,end,100,20) as promoterInterval FROM ref
+        |SELECT start, end, bdg_promoters(start,end,100,20) as promoterInterval FROM ref
        """.stripMargin
 
-reflect
-*******
+bdg_reflect
+***********
 
 Reflect function is performing operation of reversing the range relative to specified reference bounds.
 It returns range with start and end fields. Sample query using reflect function:
 
 ::
 
-    spark.sqlContext.udf.register("reflect", RangeMethods.reflect _)
-
     val query =
       s"""
-        |SELECT start, end, reflect(start,end,11000,15000) as reflectedInterval FROM ref
+        |SELECT start, end, bdg_reflect(start,end,11000,15000) as reflectedInterval FROM ref
        """.stripMargin 
    
    
-Coverage
-*********
+bdg_coverage
+************
 
 In order to compute coverage for your sample you can run a set of queries as follows:
 
@@ -201,17 +209,18 @@ In order to compute coverage for your sample you can run a set of queries as fol
                |OPTIONS(path "${bamPath}")
                |
           """.stripMargin)
-    ss.sql(s"SELECT * FROM coverage('${tableNameBAM}')").show(5)
+    ss.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878')").show(5)
 
-    +--------+----------+--------+--------+
-    |sampleId|contigName|position|coverage|
-    +--------+----------+--------+--------+
-    | NA12878|      chr1|     137|       1|
-    | NA12878|      chr1|     138|       1|
-    | NA12878|      chr1|     139|       1|
-    | NA12878|      chr1|     140|       1|
-    | NA12878|      chr1|     141|       1|
-    +--------+----------+--------+--------+
+            +----------+-----+---+--------+
+            |contigName|start|end|coverage|
+            +----------+-----+---+--------+
+            |      chr1|   34| 34|       1|
+            |      chr1|   35| 35|       2|
+            |      chr1|   36| 37|       3|
+            |      chr1|   38| 40|       4|
+            |      chr1|   41| 49|       5|
+            +----------+-----+---+--------+
+
 
 If you would like to do additional short reads prefiltering, you can create a temporary table and use it as an input to the coverage function, e.g.:
 

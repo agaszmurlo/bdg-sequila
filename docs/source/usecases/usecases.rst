@@ -29,7 +29,7 @@ Run bdg-sequilaR docker
 
 
 Download input data, install and load R libraries
-***************************
+*************************************************
 
 .. code-block:: R
 
@@ -145,7 +145,7 @@ Load input data to SeQuiLa
 
 
 Count the number of reads per target using SeQuiLa
-***************************
+**************************************************
 
 .. code-block:: R
 
@@ -262,7 +262,7 @@ Run CODEX
    :align: center
 
 Annotate detected CNVs with overlapping genes using SeQuiLa
-***************************
+***********************************************************
 
 .. code-block:: R
     
