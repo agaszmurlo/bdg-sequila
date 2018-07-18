@@ -12,12 +12,19 @@ Below we will describe how to implement SQL queries to efficiently join genomic 
 
 
 
-Dataset definition - TODO
-###########################
+Dataset definition 
+###################
 
 Let's assume that you already have prepared or imported two datasets ``s1`` and ``s2`` which both
 contain location indices of start and end of interval (usually named: start, end).
-Optionally you may also want to take chromosome name into account (usually chr).
+You may also want to take chromosome name into account (usually chr). Additionally your genomic intervals dataset can contain optional annotations. 
+
+
+.. figure:: structure.*
+    :scale: 100
+
+    Sample datasets' structure.
+
 
 You have to register SeQuiLa extra strategy and prepare a SQL query that will be performed.
 

@@ -10,7 +10,7 @@ SeQuiLa is a distributed, ANSI-SQL compliant solution for efficient genomic inte
 Consider datasets $s1$ and $s2$, storing genomic intervals, such as $|s1|$<$|s2|$. Let's assume that their structure containc necessary genomic coordinates (`chromosome`, `start position`, `end position`) along with optional additional interval annotations (e.g. targetId). 
 
 .. figure:: structure.*
-    :scale: 80
+    :scale: 100
 
     Dataset s1 and s2. Both storing genomic intervals with necessary genomic coordinates and optional annotations
 
