@@ -32,6 +32,15 @@ SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals queryi
    - can be run on single computer (locally) or Hadoop cluster using YARN
 
 
+Main components:
+*****************
+
+.. figure:: architecture/components.*
+    :scale: 100
+
+Availibility:
+**************
+
 You can find SeQuiLa publicly available in following repositories:
 
 
