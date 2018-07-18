@@ -68,6 +68,8 @@ Download input data, install and load R libraries
     download.file("ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/exome_pull_down_targets/20130108.exome.targets.bed", 
                     paste0(dataDir,"20130108.exome.targets.bed" ) )
     
+    system("sed   's/^chr//' /data/20130108.exome.targets.bed > /data/cleaned_targets.bed")
+    
     # Download RefSeq genes track from UCSC
     download.file("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/refFlat.txt.gz", 
                     paste0(dataDir, "refFlat.txt.gz"))
@@ -117,8 +119,10 @@ Load input data to SeQuiLa
     #create a table with target data 
     sequila_sql(ss,'targets','CREATE TABLE targets (Chr string, Start integer,End integer, v1 string)
     USING csv
-    OPTIONS (path "/data/20130108.exome.targets.bed", header "false", inferSchema "false", delimiter "\t")')
-
+    OPTIONS (path "/data/cleaned_targets.bed", header "false", inferSchema "false", delimiter "\t")')
+    
+    
+    #inspect content of targets table
     sequila_sql(ss, query= "select * from targets limit 10")
 
 .. code-block:: bash
