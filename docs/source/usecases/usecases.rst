@@ -277,7 +277,7 @@ Annotate detected CNVs with overlapping genes using SeQuiLa
     sequila_sql(ss,'ref_flat','CREATE TABLE ref_flat  (symbol string, id string,chr string, strand string, txstart integer, txend integer, 
                                                         cdsstart integer, cdsend integer, exonnum integer, exonstarts string, exonends string )
                                 USING csv
-                                OPTIONS (path "/data/refFlat.txt", header "false", inferSchema "false", delimiter "\t")'
+                                OPTIONS (path "/data/refFlat.txt", header "false", inferSchema "false", delimiter "\t")')
 
                                 
 
