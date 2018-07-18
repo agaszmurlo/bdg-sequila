@@ -64,6 +64,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     SequilaRegister.register(session)
     session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878')").show(5)
 
+
   }
 
 }

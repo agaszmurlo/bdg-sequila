@@ -73,6 +73,10 @@ If using in Scala outside bdg-shell then you need first register the UDFs as fol
 
     import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
     import org.apache.spark.sql.SequilaSession
+    import org.apache.spark.sql.SparkSession
+
+    val spark = SparkSession.builder()
+        .getOrCreate()
     val ss = new SequilaSession(spark)
     SequilaRegister.register(ss)
     UDFRegister.register(ss)
@@ -220,36 +224,6 @@ In order to compute coverage for your sample you can run a set of queries as fol
             |      chr1|   38| 40|       4|
             |      chr1|   41| 49|       5|
             +----------+-----+---+--------+
-
-
-If you would like to do additional short reads prefiltering, you can create a temporary table and use it as an input to the coverage function, e.g.:
-
-.. code-block:: scala
-
-    ss.sql(s"CREATE TABLE filtered_reads AS SELECT * FROM ${tableNameBAM} WHERE mapq > 10 AND start> 200")
-    ss.sql(s"SELECT * FROM coverage('filtered_reads')").show(5)
-
-    +--------+----------+--------+--------+
-    |sampleId|contigName|position|coverage|
-    +--------+----------+--------+--------+
-    | NA12878|      chr1|     361|       1|
-    | NA12878|      chr1|     362|       1|
-    | NA12878|      chr1|     363|       1|
-    | NA12878|      chr1|     364|       1|
-    | NA12878|      chr1|     365|       1|
-    +--------+----------+--------+--------+
-
-(Experimental WIP) If you are interested in coverage histograms using e.g. mapping quality you can use the following table valued function:
-
-.. code-block:: scala
-
-    ss.sql(s"SELECT * FROM coverage_hist('${tableNameBAM}') WHERE position=20204").show()
-
-    +--------+----------+--------+------------------+-------------+
-    |sampleId|contigName|position|          coverage|coverageTotal|
-    +--------+----------+--------+------------------+-------------+
-    | NA12878|      chr1|   20204|[1017, 0, 2, 0, 0]|         1019|
-    +--------+----------+--------+------------------+-------------+
 
 
 Functional parameteres
