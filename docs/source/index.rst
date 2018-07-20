@@ -33,14 +33,14 @@ SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals queryi
    - can be run on single computer (locally) or Hadoop cluster using YARN
 
 
-Main components:
-*****************
+.. rubric:: Main components:
+
 
 .. figure:: architecture/components.*
     :scale: 100
 
-Availability:
-**************
+.. rubric:: Availability:
+
 
 You can find SeQuiLa publicly available in following repositories:
 
@@ -54,8 +54,8 @@ sparklyr-sequila     `<https://github.com/ZSI-Bio/bdg-sparklyr-sequila/>`_
 Docker Hub           `<https://hub.docker.com/r/biodatageeks/|project_name|/>`_
 =================   =====================================================================
 
-Using SeQuiLa in your Scala code :
-**********************************
+.. rubric:: Using SeQuiLa in your Scala code :
+
 
 build.sbt
 
@@ -81,19 +81,18 @@ Example.scala
     UDFRegister.register(ss)
     ss.sql(...)
 
-Release notes:
-**************
+.. rubric:: Release notes:
+
 
 0.4
-###
+
  - completely rewritten R support as a sparklyr extension
  - experimental support for efficient coverage computation for BAMDatasource exposed as a table-valued function (bdg_coverage)
  - sample pruning mechanism for queries accessing only subset of samples from a table (BAMDatasource)
  - a new JDBC interface based on SequilaThriftServer
 
 
-Contents:
-==========
+
 
 .. toctree::
    :numbered:
