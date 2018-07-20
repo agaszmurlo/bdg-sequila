@@ -12,7 +12,7 @@ SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals queryi
 
 * SeQuiLa is fast:
 
-   - genome-size analyses in several minutes
+   - genome-wide analyses in several minutes
    - 22x+ speedup over Spark default join operation
    - 100% accuracy in functional tests against GRanges
 

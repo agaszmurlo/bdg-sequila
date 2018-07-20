@@ -6,7 +6,7 @@ API
 
 The API that is provided by SeQuiLa is not a set of predefined functions but
 rather it  exposes a flexible and enhanced SQL interface for querying genomic datasets.
-Enhanced in terms  range joins performance between datasets which is crucial to data analysis in bioinformatics
+Enhanced in terms of high  performance of range joins between datasets, which is crucial to data analysis in bioinformatics.
 Below we will describe how to implement SQL queries to efficiently join genomic datasets with SeQuiLa.
 
 
@@ -235,7 +235,6 @@ In order to compute coverage for a sample one can run a set of queries as follow
 Functional parameteres
 ######################
 
-Currently SeQuiLa provides three additional parameters that may control the join operation in terms of results and performance.
 
 
 minOverlap

@@ -7,12 +7,12 @@ Overview
 
 SeQuiLa is a distributed, ANSI-SQL compliant solution for efficient genomic intervals querying and processing that is available as an additional Apache Spark package. In the runtime it extends Apache SparkSQL Catalyst optimizer with custom execution strategies utilizing distributed interval forests based map joins for inner join operations using range conditions. 
 
-Consider datasets :math:`s1` and :math:`s2`, storing genomic intervals, such as :math:`|s1|<|s2|`. Let's assume that their structure contains necessary genomic coordinates (`chromosome`, `start position`, `end position`) along with optional additional interval annotations (e.g. targetId).
+Consider datasets `s1` and `s2`, storing genomic intervals, such as `|s1|<|s2|`. Let's assume that their structure contains necessary genomic coordinates (`chromosome`, `start position`, `end position`) along with optional additional interval annotations (e.g. targetId).
 
 .. figure:: structure.*
     :scale: 100
 
-    Dataset :math:`s1` and :math:`s2`. Both storing genomic intervals with necessary genomic coordinates and optional annotations
+    Dataset `s1` and `s2`. Both storing genomic intervals with necessary genomic coordinates and optional annotations
 
 Our goal is to efficiently perform query as shown below:
 
@@ -25,7 +25,7 @@ Our goal is to efficiently perform query as shown below:
     AND s1.start<=s2.end
     GROUP BY targetId;
 
-The main idea of the algorithm is to transform dataset :math:`s1` into a broadcastable structure of an interval forest (a hash map of interval trees, each representing one chromosome). The intervals from dataset :math:`s2` can be efficiently intersected with the constructed interval forest.
+The main idea of the algorithm is to transform dataset `s1` into a broadcastable structure of an interval forest (a hash map of interval trees, each representing one chromosome). The intervals from dataset `s2` can be efficiently intersected with the constructed interval forest.
 
 
 Let's additionally presume that we have a cluster with a Spark driver, three worker nodes and that the tables are partitioned between worker nodes.
@@ -97,7 +97,7 @@ It can be integrated with third-party tools using SparkSQL JDBC driver and with 
 Usage patterns
 ###############
 
-SeQuiLa can be used in different ways. Specifically it supports ad-hoc research, which is typically focused on quick analysis on files. Depending on your preferences you can use predefined scripts (findOverlaps and featureCounts) or write your own code snippets within spark-shell or our bdg-shell. Additionally SeQuiLa also can be used along with your existing applications written in Scala/Spark, R or any other language/platform.
+SeQuiLa can be used in different ways. Specifically, it supports ad-hoc research, which is typically focused on quick analysis on data stored in files. Depending on your preferences, you can use predefined scripts (findOverlaps and featureCounts) or write your own code snippets within spark-shell or our bdg-shell. Additionally SeQuiLa also can be used along with your existing applications written in Scala/Spark, R or any other language/platform.
 
 
 .. figure:: usage_all.*
