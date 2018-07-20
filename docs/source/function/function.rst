@@ -23,7 +23,7 @@ You may also want to take chromosome name into account (usually chr). Additional
 .. figure:: structure.*
     :scale: 100
 
-    Sample datasets' structure.
+    Sample datasets' structure. Each dataset must contain genomic interval coordinates (chromosome, start, stop). Additionally it may, but doesn't have to, contain columns with genomic interval annotations.
 
 
 You have to register SeQuiLa extra strategy and prepare a SQL query that will be executed.
