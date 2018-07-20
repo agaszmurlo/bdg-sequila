@@ -4,7 +4,7 @@ Integrations
 Integration with R
 ####################
 
-SeQuiLa comes also with first-class integration with R environment using sparklyr-sequila R package.
+SeQuiLa comes also with a first-class integration with R environment using sparklyr-sequila R package.
 
 Installation
 ************
@@ -87,7 +87,7 @@ Beeline
 SquirrelSQL
 ***********
 
-You will need Spark JDBC driver. We have prepared assembly jar for this purpose: http://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/org/biodatageeeks/spark/jdbc/spark-jdbc_2.11/0.12/spark-jdbc_2.11-0.12-assembly.jar
+You will need Spark JDBC driver. We have prepared an assembly jar for this purpose: http://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/org/biodatageeeks/spark/jdbc/spark-jdbc_2.11/0.12/spark-jdbc_2.11-0.12-assembly.jar
 
 Squirrel SQL configure new driver:
 
@@ -104,7 +104,7 @@ Create new Alias:
 
 Running on YARN
 ################
-Running SeQuiLa tools on non-kerberized(not secured) Hadoop cluster is pretty straighforward:
+Running SeQuiLa tools on non-kerberized(not secured) Hadoop cluster is pretty straightforward:
 
 .. code-block:: bash
 
@@ -127,9 +127,5 @@ Once started you should be able to see you bdg-shell app in YARN web UI:
 .. note::
 
     For detailed instructions on how to deploy Apache Spark applications on YARN  please check this `page <https://spark.apache.org/docs/latest/submitting-applications.html>`_.
-    Please note that all options including resource management can be set in exactly the same way for all SeQuiLa's apps including: bdg-shell, sequilaR and featureCounts.
-
-
-Integration existing apps
-##########################
+    Please note that all options including resource management can be set in exactly the same way for all SeQuiLa's apps including: bdg-shell and featureCounts.
 

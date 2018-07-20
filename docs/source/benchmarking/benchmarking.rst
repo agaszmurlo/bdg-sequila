@@ -5,13 +5,13 @@ Benchmarking
 
 Performance tests description
 #############################
-In order to evaluate our range join strategy we ran a number of tests using both one-node and a Hadoop cluster
-installation. In that way we were able to analyze both vertical (by means of adding computing resources such as CPU/RAM to one machine)
+In order to evaluate our range join strategy we have run a number of tests using both one-node and a Hadoop cluster
+installations. In that way we were able to analyze both vertical (by means of adding computing resources such as CPU/RAM on one machine)
 as well as horizontal (by means of adding resources on multiple machines) scalability.
 
 The main idea of the test was to compare performance of SeQuiLa with other tools like featureCounts and genAp that can be used
 to compute the number of reads intersecting predefined genomic intervals. It is by no means one of the most commonly used operations
-in both DNA and RNA-seq data processing, most notably in gene differential expression and CNV-calling.
+in both DNA and RNA-seq data processing, most notably in gene differential expression and copy number variation-calling.
 featureCounts performance results have been treated as a baseline. In order to show the difference between the naive approach using the
 default range join strategy available in Spark SQL and SeQuiLa interval-tree one, we have included it in the single-node test.
 
@@ -32,8 +32,8 @@ NN/RM           1           24      64
 DN/NM           4           24      64
 ======  =============== =========   ===
 
-EN - edge node where only Application masters and Spark Drivers were launched in case of cluster tests.
-In case of single node tests (Apache Spark local mode) all computations were performed on the edge node.
+EN - edge node where only Application masters and Spark Drivers have been launched in case of cluster tests.
+In case of single node tests (Apache Spark local mode), all computations have been performed on the edge node.
 
 NN - HDFS NameNode
 
@@ -65,7 +65,7 @@ Datasets
 ########
 Two NGS datasets have been used in all the tests.
 WES (whole exome sequencing) and WGS (whole genome sequencing) datasets have been used for vertical and horizontal scalability
-evaluation respectively. Both of them came from sequencing of NA 12878 sample that is widely used in many benchmarks.
+evaluation respectively. Both of them came from sequencing of NA12878 sample that is widely used in many benchmarks.
 The table below presents basic datasets information:
 
 =========   ======  =========    ==========
@@ -93,7 +93,7 @@ File-dataframe mapping
 ***********************
 
 The first step of the testing procedure was to prepare mapping between input datasets (in BAM, ADAM and BED formats)  and
-their corresponding dataframe/table abstraction. In case of alignment file our custom data source has been used, for a BED file Spark's builtin dedicated
+their corresponding dataframe/table abstraction. In case of alignment files our custom data sources has been used, for a BED file Spark's builtin dedicated
 for CSV data access.
 
 
@@ -175,7 +175,7 @@ For counting reads overlapping predefined feature regions the following SQL quer
          )
          GROUP BY targets.contigName,targets.start,targets.end
 
-Exaclty the same query has been used for both single node and cluster tests.
+Exactly the same query has been used for both single node and cluster tests.
 
 
 Apache Spark settings
@@ -192,7 +192,7 @@ num-executors    1-15
 
 Results
 #######
-SeQuiLa when run in parallel outperforms selected competing tools in terms of speed on single node (1.7-22.1 times) and cluster (3.2-4.7 times).
+SeQuiLa when run in parallel outperforms selected competing tools in terms of speed on single node (1.7-22.1x) and cluster (3.2-4.7x).
 SeQuiLa strategy involving broadcasting interval forest with all data columns (SeQuiLa_it_all) performs best
 in most of the cases (no network shuffling required), whereas broadcasting intervals with identifiers only (SeQuiLa_it_int)
 performs comparable to, or better than GenAp.
@@ -214,12 +214,12 @@ Hadoop cluster
 Limitations
 ***********
 
-SeQuiLa is slower than featureCounts in a single-threaded applications due to less performat Java BAM reader( mainly BGZF decompression) available
-in htsjdk library.
+SeQuiLa is slower than featureCounts in a single-threaded applications due to less performat Java BAM reader (mainly BGZF decompression) available
+in the Java htsjdk library.
 
 Discussion
 ##########
 Results showed that SeQuiLa significantly accelerates  genomic interval queries.
 We are aware that paradigm of distributed computing is currently not fully embraced by bioinformaticians therefore we have put
-additional effort into preparing SeQuiLa to be easily integrated into existing applications and pipelines.
+an additional effort into preparing SeQuiLa to be easily integrated into existing applications and pipelines.
 

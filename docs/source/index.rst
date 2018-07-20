@@ -6,24 +6,25 @@
 SeQuiLa User Guide 
 ====================
 
-SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals querying and processing built on top of `Apache Spark`_. Range joins are bread and butter for NGS analysis but high volume of data make them very slow or even failing to compute. 
+SeQuiLa is an ANSI-SQL compliant solution for efficient genomic intervals querying and processing built on top of `Apache Spark`_. Range joins are bread and butter for NGS analysis but the high volume of data make them execute very slowly or even failing to compute.
 
 .. _Apache Spark: https://spark.apache.org/ 
 
 * SeQuiLa is fast:
 
-   - genome-size analysis in several minutes 
-   - 22x+ speedup over Spark default processing
+   - genome-size analyses in several minutes
+   - 22x+ speedup over Spark default join operation
    - 100% accuracy in functional tests against GRanges
 
 * SeQuiLa is elastic:
 
    - growing catalogue of utility functions and operations including: `featureCounts`, `countOverlaps` and `coverage`
-   - exposed parameters for further performance optimizations 
-   - integration with third-party tools through SparkSQL JDBC driver 
-   - can be used natively in R using sparklyr-sequila package
-   - possibility to use SeQuiLa as command line tool without any exposure to Scala/Spark/Hadoop
+   - exposed parameters for further performance tuning
+   - integration with third-party tools through SparkSQL Thrift JDBC driver
+   - can be used natively in R with sparklyr-sequila package
+   - possibility to use it as command line tool without any exposure to Scala/Spark/Hadoop
    - Docker images available for a quick start
+   - can process data stored both on local as well as on distributed file systems (HDFS, S3, Ceph, etc.)
 
 
 * SeQuiLa is scalable:
@@ -38,7 +39,7 @@ Main components:
 .. figure:: architecture/components.*
     :scale: 100
 
-Availibility:
+Availability:
 **************
 
 You can find SeQuiLa publicly available in following repositories:
@@ -53,14 +54,41 @@ sparklyr-sequila     `<https://github.com/ZSI-Bio/bdg-sparklyr-sequila/>`_
 Docker Hub           `<https://hub.docker.com/r/biodatageeks/|project_name|/>`_
 =================   =====================================================================
 
+Using SeQuiLa in your Scala code :
+**********************************
+
+build.sbt
+
+.. code-block:: scala
+
+    libraryDependencies +=  "org.biodatageeks" % "|project_name|_2.11" % "|version|"
+
+    resolvers +=  "biodatageeks-releases" at "https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/"
+    resolvers +=  "biodatageeks-snapshots" at "https://zsibio.ii.pw.edu.pl/nexus/repository/maven-snapshots/"
+
+Example.scala
+
+.. code-block:: scala
+
+    import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
+    import org.apache.spark.sql.SequilaSession
+    import org.apache.spark.sql.SparkSession
+
+    val spark = SparkSession.builder()
+        .getOrCreate()
+    val ss = new SequilaSession(spark)
+    SequilaRegister.register(ss)
+    UDFRegister.register(ss)
+    ss.sql(...)
+
 Release notes:
 **************
 
 0.4
 ###
- - completely rewritten R support using sparklyr extension
- - experimental support for efficient coverage compution exposed as a table-valued function
- - sample pruning mechanism for queries accessing only subset of samples from table (BAMDatasource)
+ - completely rewritten R support as a sparklyr extension
+ - experimental support for efficient coverage computation for BAMDatasource exposed as a table-valued function (bdg_coverage)
+ - sample pruning mechanism for queries accessing only subset of samples from a table (BAMDatasource)
  - a new JDBC interface based on SequilaThriftServer
 
 
