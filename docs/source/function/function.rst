@@ -322,6 +322,7 @@ process and query them using a SQL interface:
     spark.sql("SELECT sampleId,contigName,start,end,cigar FROM reads").show(5)
 
 ADAM data source can be defined in the analogues way (just requires using org.biodatageeks.datasources.ADAM.ADAMDataSource).
+
 Implicit partition pruning for BAM data source
 ************************************************
 
