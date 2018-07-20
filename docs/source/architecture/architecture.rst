@@ -103,6 +103,6 @@ SeQuiLa can be used in different ways. Specifically it supports ad-hoc research,
 .. figure:: usage_all.*
     :scale: 100
 
-    SeQuiLa supports both file-oriented and data-oriented approach for analysis. Custom analysis can be written in R, Python or Scala.
+    SeQuiLa supports both file-oriented and data-oriented approach for analysis. Custom analysis can be written in SQL, R or Scala.
 
 
