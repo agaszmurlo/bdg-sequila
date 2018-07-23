@@ -10,6 +10,11 @@ import org.seqdoop.hadoop_bam.{AnySAMInputFormat, BAMInputFormat, SAMRecordWrita
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 
 import scala.collection.mutable
+import htsjdk.samtools._
+import com.intel.gkl.compression._
+
+import htsjdk.samtools.util.zip.InflaterFactory
+import java.util.zip.Inflater
 
 
 case class CovRecord(contigName:String,start:Int,end:Int, cov:Short)
@@ -129,8 +134,8 @@ object CoverageMethodsMos {
 
   def main(args: Array[String]): Unit = {
     val spark = SparkSession.builder()
-     .master("local[1]")
-     .config("spark.driver.memory", "2g")
+     .master("local[4]")
+     .config("spark.driver.memory", "8g")
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .getOrCreate()
 
@@ -138,10 +143,15 @@ object CoverageMethodsMos {
       .sparkContext
       .hadoopConfiguration
       .set(SAMHeaderReader.VALIDATION_STRINGENCY_PROPERTY, ValidationStringency.LENIENT.toString)
+
     spark
       .sparkContext
       .hadoopConfiguration
       .setInt("mapred.min.split.size", (134217728).toInt)
+    spark
+      .sparkContext
+      .hadoopConfiguration
+      //.setBoolean("hadoopbam.bam.use-intel-inflater",true)
 
     //spark.sparkContext.setLogLevel("INFO")
     lazy val alignments = spark.sparkContext
@@ -150,7 +160,7 @@ object CoverageMethodsMos {
 
     lazy val events = readsToEventsArray(alignments.map(r => r._2))
     spark.time {
-      //println(alignments.count)
+      println(alignments.count)
     }
     spark.time {
 
@@ -167,23 +177,45 @@ object CoverageMethodsMos {
     val size = 100000000
     val a = new Array[Short](size)
 
-    spark.time{
-      val f = new File("/Users/marek//Downloads/data/NA12878.ga2.exome.maq.recal.bam")
-      lazy val a =  SamReaderFactory
-        .makeDefault()
-        .disable(SamReaderFactory.Option.EAGERLY_DECODE)
-        .validationStringency(ValidationStringency.LENIENT)
-        .setUseAsyncIo(false)
-      lazy val b = a.open(f)
-      lazy val c = b.iterator()
-      var cnt = 0
-      while(c.hasNext){
-        val x = c.next().getStart
-        cnt += 1
-      }
-      println(cnt)
+//    spark.time{
+//      println ("Running builtin Java's inflate")
+//      val f = new File("/Users/marek//Downloads/data/NA12878.ga2.exome.maq.recal.bam")
+//      lazy val a =  SamReaderFactory
+//        .makeDefault()
+//        .disable(SamReaderFactory.Option.EAGERLY_DECODE)
+//        .validationStringency(ValidationStringency.LENIENT)
+//        .setUseAsyncIo(false)
+//      lazy val b = a.open(f)
+//      lazy val c = b.iterator()
+//      var cnt = 0
+//      while(c.hasNext){
+//        val x = c.next().getStart
+//        cnt += 1
+//      }
+//      println(cnt)
+//
+//    }
+//   spark.time{
+//     println ("Running GKL inflate")
+//     val intelDeflaterFactory =  new IntelInflaterFactory()
+//
+//     val f = new File("/Users/marek//Downloads/data/NA12878.ga2.exome.maq.recal.bam")
+//     lazy val a =  SamReaderFactory
+//       .makeDefault()
+//       .disable(SamReaderFactory.Option.EAGERLY_DECODE)
+//       .validationStringency(ValidationStringency.LENIENT)
+//       .setUseAsyncIo(false)
+//       .inflaterFactory(intelDeflaterFactory)
+//     lazy val b = a.open(f)
+//     lazy val c = b.iterator()
+//     var cnt = 0
+//     while(c.hasNext){
+//       val x = c.next().getStart
+//       cnt += 1
+//     }
+//     println(cnt)
+//   }
 
-    }
 
 
   }

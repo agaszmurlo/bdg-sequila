@@ -12,7 +12,7 @@ echo '
  ___/ /  __/ /_/ / /_/ / / /___/ /_/ /
 /____/\___/\___\_\__,_/_/_____/\__,_/
                                                           '
-echo BDG_VERSION
+echo $BDG_VERSION
 echo -e "\n"
 if [[ $3 != 'build' ]]; then
 spark-shell -i /tmp/bdg-toolset/bdginit.scala --packages org.biodatageeks:bdg-sequila_2.11:${BDG_VERSION} \

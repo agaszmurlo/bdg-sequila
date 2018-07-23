@@ -35,7 +35,7 @@ echo '
  ___/ /  __/ /_/ / /_/ / / /___/ /_/ /_____/ __/ / /___
 /____/\___/\___\_\__,_/_/_____/\__,_/     /_/    \____/
                                                           '
-echo BDG_VERSION
+echo $BDG_VERSION
 echo -e "\n"
 echo "Running with the following arguments: $appParams"
 echo "Arguments passed to Apache Spark: $sparkParams"
