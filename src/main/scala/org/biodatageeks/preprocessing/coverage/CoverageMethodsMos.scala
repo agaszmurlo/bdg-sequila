@@ -11,7 +11,7 @@ import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 
 import scala.collection.mutable
 import htsjdk.samtools._
-import com.intel.gkl.compression._
+//import com.intel.gkl.compression._
 
 import htsjdk.samtools.util.zip.InflaterFactory
 import java.util.zip.Inflater
