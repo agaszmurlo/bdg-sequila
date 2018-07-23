@@ -215,7 +215,7 @@ Limitations
 ***********
 
 SeQuiLa is slower than featureCounts in a single-threaded applications due to less performat Java BAM reader (mainly BGZF decompression) available
-in the Java htsjdk library.
+in the Java htsjdk library. We will try to investigate and resolve this bottleneck in the next major release.
 
 Discussion
 ##########

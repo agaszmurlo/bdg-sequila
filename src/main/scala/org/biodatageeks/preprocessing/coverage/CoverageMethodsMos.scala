@@ -1,6 +1,8 @@
 package org.biodatageeks.preprocessing.coverage
 
-import htsjdk.samtools.{CigarOperator, ValidationStringency}
+import java.io.File
+
+import htsjdk.samtools.{BAMFileReader, CigarOperator, SamReaderFactory, ValidationStringency}
 import org.apache.hadoop.io.LongWritable
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
@@ -127,8 +129,8 @@ object CoverageMethodsMos {
 
   def main(args: Array[String]): Unit = {
     val spark = SparkSession.builder()
-     // .master("local[1]")
-     // .config("spark.driver.memory", "8g")
+     .master("local[1]")
+     .config("spark.driver.memory", "2g")
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .getOrCreate()
 
@@ -143,12 +145,12 @@ object CoverageMethodsMos {
 
     //spark.sparkContext.setLogLevel("INFO")
     lazy val alignments = spark.sparkContext
-     // .newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat]("/Users/marek//Downloads/data/NA12878.ga2.exome.maq.recal.bam")
-    .newAPIHadoopFile[LongWritable, SAMRecordWritable,BAMInputFormat]("/Users/marek/data/NA12878.chrom20.ILLUMINA.bwa.CEU.low_coverage.20121211.bam")
+      .newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat]("/Users/marek//Downloads/data/NA12878.ga2.exome.maq.recal.bam")
+   // .newAPIHadoopFile[LongWritable, SAMRecordWritable,BAMInputFormat]("/Users/marek/data/NA12878.chrom20.ILLUMINA.bwa.CEU.low_coverage.20121211.bam")
 
     lazy val events = readsToEventsArray(alignments.map(r => r._2))
     spark.time {
-      println(alignments.count)
+      //println(alignments.count)
     }
     spark.time {
 
@@ -164,31 +166,23 @@ object CoverageMethodsMos {
 
     val size = 100000000
     val a = new Array[Short](size)
-    spark.time{
-
-      var i = 0
-      while(i < a.length){
-        a(i) = 1.toShort
-        i += 1
-      }
-    }
 
     spark.time{
-
-     for(i<- 0 to a.length -1 )
-        a(i) = 1.toShort
+      val f = new File("/Users/marek//Downloads/data/NA12878.ga2.exome.maq.recal.bam")
+      lazy val a =  SamReaderFactory
+        .makeDefault()
+        .disable(SamReaderFactory.Option.EAGERLY_DECODE)
+        .validationStringency(ValidationStringency.LENIENT)
+        .setUseAsyncIo(false)
+      lazy val b = a.open(f)
+      b.
+      lazy val c = b.iterator()
+      var cnt = 0
+      while(c.hasNext){
+        val x = c.next().getStart
+        cnt += 1
       }
-
-    val map = new mutable.HashMap[String,Int]()
-    map += ("test" -> 0)
-    map += ("test2" -> 0)
-    map += ("test3" -> 0)
-    var i = 0
-    spark.time{
-      while(i < a.length){
-         map("test") =  map("test") + 1
-        i+=1
-      }
+      println(cnt)
 
     }
 

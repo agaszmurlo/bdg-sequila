@@ -12,7 +12,7 @@ Dataset (20 samples) was downloaded from 1000 genomes project (ftp://ftp.1000gen
 
 
 .. figure:: SeQuiLa_codex.*
-   :scale: 40%
+   :scale: 70%
    :align: center
 
    
@@ -314,29 +314,46 @@ Dataset (GSE22260) comes from NCBI - SRA repository and includes RNA-seq data of
    :scale: 40%
    :align: center
 
---------------------------------------
+    --------------------------------------
 
+Run bdg-sequilaR docker
+***************************
 
 .. code-block:: bash
 
 
-      docker pull biodatageeks/|project_name|:|version|
-      docker run -p 4041:4040  -e USERID=$UID -e GROUPID=$(id -g) \
-      -it  -v /Users/ales/data/sequila:/data/input biodatageeks/|project_name|:|version| bdg-sequilaR
+    docker pull biodatageeks/|project_name|:|version|
 
+    docker run -p 4041:4040  -e USERID=$UID -e GROUPID=$(id -g) \
+    -it  -v /Users/ales/data/sequila:/data/input biodatageeks/|project_name|:|version| bdg-sequilaR
+
+
+Load input data to SeQuila
+*************************************************
 .. code-block:: R
 
-      #register SeQuilaR extensions
-      sparkR.callJStatic("org.biodatageeks.R.SequilaR","init",spark)
+    install.packages('devtools')
+    devtools::install_github('ZSI-Bio/bdg-sparklyr-sequila')
 
-      #create db
-      sql("CREATE DATABASE dbRNAseq")
-      sql("USE dbRNAseq")
+    library(sparklyr)
+    library(sequila)
+    library(dplyr)
+    library(reshape2)
 
-      #create data source with reads
-      sql('CREATE TABLE reads USING org.biodatageeks.datasources.BAM.BAMDataSource OPTIONS(path "/data/input/*.bam")')
+    #Set Spark parameters and connect
+    driver_mem <- "40g"
+    master <- "local[20]"
+    ss<-sequila_connect(master,driver_memory<-driver_mem)
 
-      head(sql('select count(distinct sampleId) from reads'))
+    #create db
+    sequila_sql(ss,query="CREATE DATABASE sequila")
+    sequila_sql(ss,query="USE sequila")
+
+    #create a BAM data source with reads
+    sequila_sql(ss,'reads','CREATE TABLE reads USING org.biodatageeks.datasources.BAM.BAMDataSource OPTIONS(path "/data/*bam")')
+
+    # Check out the reads
+	sequila_sql(ss, query="select count(distinct sampleId) from reads"))
 
 .. code-block:: bash
 
@@ -348,28 +365,17 @@ Dataset (GSE22260) comes from NCBI - SRA repository and includes RNA-seq data of
 
 .. code-block:: R
 
-     #GTF with target regions
-     sql('CREATE TABLE targets_temp(Chr string, TypeDB string, Feature string, Start integer, End integer,
-                                    t1 varchar(1), Strand varchar(1), t2 varchar(1),
-                                    Gene_id_temp varchar(30),Gene_id varchar(20))
-          USING csv
-          OPTIONS (path "/data/input/Homo_sapiens.gtf", header "false", inferSchema "false", delimiter "\t")')
+    #GTF with target regions
+    system(" awk -v OFS='\t' '{if ($3~/gene/); print  $1, $4, $5, $7,substr($10,2,15)}' /Users/ales/data/sequila/Homo_sapiens.gtf > /Users/ales/data/sequila/Homo_sapiens_genes.gtf ")
 
-::
+    sequila_sql(ss,'targets','CREATE TABLE targets(Chr string, Start integer, End integer, Strand string, Gene_id string)
+            USING csv
+            OPTIONS (path "/Users/ales/data/sequila/Homo_sapiens_genes.gtf", header "false", inferSchema "false", delimiter "\t")')
 
-     Depends on needs, build the target table with genes or any features based on gtf source.
-     This analysis is based on genes, the targets table contains genes coordinates.
-
-.. code-block:: R
-
-     sql('CREATE TABLE targets as
-          SELECT Chr, Start, End, Strand, substr(Gene_id_temp, instr(Gene_id_temp,"E"),15) as Gene_id
-          FROM targets_temp
-          WHERE Feature="gene" ')
+    sequila_sql(ss, query= "select * from targets limit 10")
 
 .. 	code-block:: bash
 
-    head(sql('select * from targets'))
     +------+-------+---------+-------+-----------------+
     |   Chr|  Start|      End| Strand|         Gene_id |
     +------+-------+---------+-------+----------------+
@@ -381,51 +387,27 @@ Dataset (GSE22260) comes from NCBI - SRA repository and includes RNA-seq data of
     |6  17 62122320| 62122421|    +  |ENSG00000207123  |
     +------+-------+---------+-------+-----------------+
 
-::
 
-  If you need different features (exon or transcript), you can build sql query accordingly.
-
-.. code-block:: R
-
-		 sql('CREATE TABLE targets as
-		      SELECT Chr, Start, End, Strand, substr(Gene_id_temp, instr(Gene_id_temp,"E"),15) as Gene_id,
-		      CASE WHEN instr(Gene_id_temp,"ENSE") > 0
-		           THEN substr(Gene_id_temp, instr(Gene_id_temp,"ENSE"),15)
-		           ELSE null END as Exon_id
-		      FROM targets_temp
-		      WHERE Feature="gene" OR Feature="exon" ')
-
-.. code-block:: bash
-
-    head(sql('select * from targets'))
-    +-------+----------+----------+-------+----------------+----------------+
-    |   Chr |   Start  |     End  |Strand |        Gene_id |         Exon_id|
-    +-------+----------+----------+-------+----------------+----------------+
-    |1   2  | 101050401| 101050641|      -| ENSG00000204634| ENSE00001710012|
-    |2   2  | 101040178| 101040385|      -| ENSG00000204634| ENSE00001471890|
-    |3   2  | 101038461| 101038655|      -| ENSG00000204634| ENSE00001471887|
-    |4   2  | 101037532| 101037708|      -| ENSG00000204634| ENSE00001471883|
-    |5   2  | 101036018| 101036168|      -| ENSG00000204634| ENSE00001471881|
-    |6   2  | 101033544| 101033758|      -| ENSG00000204634| ENSE00001471879|
-    +-------+----------+----------+-------+----------------+----------------+
-
-
-Feature Counts with SeQuiLa
-***************************
+Count the number of reads per target using SeQuiLa
+**************************************************
 
 .. code-block:: R
 
   #query for count reads
-  FC <- sql('SELECT sampleId, Gene_id, Chr ,targets.Start ,targets.End ,Strand, count(*) AS Counts
-		        FROM reads JOIN targets
-		          ON (Chr=reads.contigName
-		          AND reads.end >= CAST(targets.Start AS INTEGER)
-		          AND reads.start <= CAST(targets.End AS INTEGER))
-		        GROUP BY SampleId, Gene_id, Chr ,targets.Start ,targets.End ,Strand ')
+  query <- 'SELECT sampleId, Gene_id, Chr ,targets.Start ,targets.End ,Strand, count(*) AS Counts
+  FROM reads JOIN targets
+  ON (Chr=reads.contigName
+  AND reads.end >= CAST(targets.Start AS INTEGER)
+  AND reads.start <= CAST(targets.End AS INTEGER))
+  GROUP BY SampleId, Gene_id, Chr ,targets.Start ,targets.End ,Strand '
 
+  res <- sequila_sql(ss,'results',query)
+  readCountPerGene <-  collect(res)
+  head(readCountPerGene)
 
   #preparation data to proper format for further analysis
-  tabC <- sum(pivot(groupBy(FC,"Gene_id"),"SampleId"),"Counts")
+  tabC <- dcast(readCountPerGene, Gene_id ~ sampleId, value.var="Counts", fun.aggregate=sum)
+
   head(tabC)
 
 .. code-block:: bash
@@ -435,7 +417,7 @@ Feature Counts with SeQuiLa
   |       Gene_id | Sub_SRR057629|Sub_SRR057630|Sub_SRR057631|Sub_SRR057632|Sub_SRR057633|Sub_SRR057634|
   +---------------+--------------+-------------+-------------+-------------+-------------+-------------+
   |ENSG00000130054|            31|           30|          147|           39|          230|           16|
-  |ENSG00000262692|            NA|           NA|            5|           NA|            7|            1|
+  |ENSG00000262692|            10|           10|            5|           17|            7|            1|
   |ENSG00000268673|            12|            4|           18|            5|            4|           14|
   |ENSG00000239881|             6|            3|           19|            9|           17|            9|
   |ENSG00000198015|           143|          135|          304|          213|          371|          133|
@@ -454,9 +436,6 @@ DEG analysis with edgeR
 
     library(edgeR)
 
-    #transform SparkR DataFrame to R data.frame
-    tabC <- collect(tabC)
-
     #input data preparation
     tab1<- as.matrix(apply(tabC,2,as.numeric))
     row.names(tab1) <- tabC$Gene_id
@@ -466,6 +445,8 @@ DEG analysis with edgeR
     #filtering out lowly expressed genes
     isexpr <- rowSums(cpm(tab1) > 5) >= 2
     dane1 <- tab1[isexpr,]
+
+    L1 <- as.factor(c("C","C","C","C","C","C","C","C","C","C","C","C","C","C","C","C","C","C","C","C","N","N","N","N","N","N","N","N","N","N"))
 
     #grouping factor about samples
     group <- L1
@@ -533,7 +514,7 @@ DEG analysis with DESeq2
 
 
 .. figure:: plotMA.*
-   :align: center
+:align: center
 
 .. code-block:: R
 
@@ -541,7 +522,7 @@ DEG analysis with DESeq2
 
 
 .. figure:: plotDispEsts.*
-   :align: center
+:align: center
 
 
 .. code-block:: R
@@ -551,7 +532,7 @@ DEG analysis with DESeq2
 
 
 .. figure:: RplotHist.*
-   :align: center
+:align: center
 
 .. code-block:: R
 
