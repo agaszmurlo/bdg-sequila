@@ -175,7 +175,6 @@ object CoverageMethodsMos {
         .validationStringency(ValidationStringency.LENIENT)
         .setUseAsyncIo(false)
       lazy val b = a.open(f)
-      b.
       lazy val c = b.iterator()
       var cnt = 0
       while(c.hasNext){
