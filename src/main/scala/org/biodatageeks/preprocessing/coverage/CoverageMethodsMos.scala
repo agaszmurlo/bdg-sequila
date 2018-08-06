@@ -112,15 +112,24 @@ object CoverageMethodsMos {
         val result = new Array[CovRecord](covArrayLength)
         var i = 0
         var prevCov = 0
+        var blockCov=0
         var blockLength = 0
         while(i < covArrayLength){
           cov += r._2._1(i)
+          if (blockLength==0)
+            blockCov=cov
+
           if(cov >0) {
-            if(prevCov>0 && prevCov != cov) {
-              result(ind) = CovRecord(contig,i+posShift - blockLength, i + posShift-1, prevCov.toShort)
+//            if(prevCov>0 && prevCov != cov) {
+ //           if(prevCov>0) {
+            if(prevCov>0 && cov - blockCov  > 10) {
+              result(ind) = CovRecord(contig,i+posShift - blockLength, i + posShift-1, blockCov.toShort)
               blockLength = 0
               ind += 1
             }
+            if (blockLength==0)
+              blockCov=cov
+
             blockLength +=1
             prevCov = cov
           }

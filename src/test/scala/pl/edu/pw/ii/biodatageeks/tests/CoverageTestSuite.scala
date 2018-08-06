@@ -42,27 +42,35 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
       """.stripMargin)
 
     }
-  test("BAM - coverage table-valued function"){
-    val session: SparkSession = SequilaSession(spark)
+//  test("BAM - coverage table-valued function"){
+//    val session: SparkSession = SequilaSession(spark)
+//
+//    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
+//    //session.sparkContext.setLogLevel("INFO")
+//    assert(session.sql(s"SELECT * FROM coverage('${tableNameBAM}') WHERE position=20204").first().getInt(3)===1019)
+//    session.sql(s"SELECT * FROM coverage_hist('${tableNameBAM}') WHERE position=20204").show()
+//
+//  }
 
-    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
-    //session.sparkContext.setLogLevel("INFO")
-    assert(session.sql(s"SELECT * FROM coverage('${tableNameBAM}') WHERE position=20204").first().getInt(3)===1019)
-    session.sql(s"SELECT * FROM coverage_hist('${tableNameBAM}') WHERE position=20204").show()
+//  test("BAM - bdg_coverage"){
+//    val session: SparkSession = SequilaSession(spark)
+//    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
+//    assert(session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878') WHERE start >=20204 AND `end`<= 20204 ").first().getShort(3)===1019.toShort)
+//
+//  }
 
-  }
+//  test("BAM - bdg_coverage - show"){
+//    val session: SparkSession = SequilaSession(spark)
+//    SequilaRegister.register(session)
+//    session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878')").show(30)
+//
+//
+//  }
 
-  test("BAM - bdg_coverage"){
-    val session: SparkSession = SequilaSession(spark)
-    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
-    assert(session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878') WHERE start >=20204 AND `end`<= 20204 ").first().getShort(3)===1019.toShort)
-
-  }
-
-  test("BAM - bdg_coverage - show"){
+  test("BAM - bdg_coverage - count time"){
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
-    session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878')").show(5)
+    spark.time(session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878')").count())
 
 
   }
