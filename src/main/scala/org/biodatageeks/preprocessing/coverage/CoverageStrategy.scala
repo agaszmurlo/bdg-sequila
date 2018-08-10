@@ -29,23 +29,25 @@ class CoverageStrategy(spark: SparkSession) extends Strategy with Serializable  
 
     case Coverage(tableName,output) => CoveragePlan(plan,spark,tableName,output) :: Nil
     case CoverageHist(tableName,output) => CoverageHistPlan(plan,spark,tableName,output) :: Nil
+
     //add support for CRAM
 
-    case BDGCoverage(tableName,sampleId,method,output) => {
+    case BDGCoverage(tableName,sampleId,method,result,output) => {
       val inputFormat = BDGTableFuncs
         .getTableMetadata(spark, tableName)
         .provider
       inputFormat match {
         case Some(f) => {
           if (f == "org.biodatageeks.datasources.BAM.BAMDataSource")
-            BDGCoveragePlan[BAMBDGInputFormat](plan, spark, tableName, sampleId, method, output) :: Nil
+            BDGCoveragePlan[BAMBDGInputFormat](plan, spark, tableName, sampleId, method, result, output) :: Nil
           else if (f == "org.biodatageeks.datasources.BAM.CRAMDataSource")
-            BDGCoveragePlan[CRAMBDGInputFormat](plan, spark, tableName, sampleId, method, output) :: Nil
+            BDGCoveragePlan[CRAMBDGInputFormat](plan, spark, tableName, sampleId, method, result, output) :: Nil
           else Nil
         }
         case None => throw new Exception("Only BAM and CRAM file formats are supported in bdg_coverage.")
       }
     }
+
     case _ => Nil
   }
 
@@ -116,8 +118,9 @@ object BDGTableFuncs{
 }
 
 case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: SparkSession,
-                                                    table:String, sampleId:String, method: String, output: Seq[Attribute])(implicit c: ClassTag[T])
+                                                    table:String, sampleId:String, method: String, result:String, output: Seq[Attribute])(implicit c: ClassTag[T])
   extends SparkPlan with Serializable  with BDGAlignFileReader [T]{
+
   def doExecute(): org.apache.spark.rdd.RDD[InternalRow] = {
 
     spark
@@ -204,28 +207,73 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
 
                 }
               }
-
           }
 
           UpdateStruct(updateMap, shrinkMap)
         }
 
         val covBroad = spark.sparkContext.broadcast(prepareBroadcast(acc.value()))
-
          CoverageMethodsMos.upateContigRange(covBroad,events)
 
       }
       case _ => throw new Exception("Unsupported coverage method")
     }
     lazy val cov = CoverageMethodsMos.eventsToCoverage(sampleId,reducedEvents)
-    cov
-      .mapPartitions(p=>{
-        val proj =  UnsafeProjection.create(schema)
-        p.map(r=>   proj.apply(InternalRow.fromSeq(Seq(/*UTF8String.fromString(sampleId),*/
-          UTF8String.fromString(r.contigName),r.start,r.end,r.cov))))
-      })
+
+    // add first block, starting from 0 // FIXME, do it if parameter is set
+
+    val first = cov.takeOrdered(1).head
+
+    val additionalBlock = {
+      if (first.start > 1) spark.sparkContext.parallelize(Seq(CovRecord(first.contigName, 1, first.start, 0)))
+      else spark.sparkContext.emptyRDD[CovRecord]
+    }
+
+    val covAppended = additionalBlock.union(cov)
+
+
+    {
+      result.toLowerCase() match {
+        case "blocks" | "" | null =>
+          covAppended
+        case "bases" =>
+          convertBlocksToBases(covAppended)
+        case _ =>
+          throw new Exception ("Unsupported parameter for coverage calculation")
+      }
+    }.mapPartitions(p => {
+      val proj = UnsafeProjection.create(schema)
+      p.map(r => proj.apply(InternalRow.fromSeq(Seq(/*UTF8String.fromString(sampleId),*/
+        UTF8String.fromString(r.contigName), r.start, r.end, r.cov))))
+    })
+
+  }
+
+  def convertBlocksToBases(blocks: RDD[CovRecord]): RDD[CovRecord] = {
+    blocks
+      .flatMap {
+        r => {
+          val chr = r.contigName
+          val start = r.start
+          val end = r.end
+          val cov = r.cov
+
+          val array = new Array[CovRecord](end - start)
+
+          var cnt = 0
+          var position = start
+
+          while (position < end) {
+            array(cnt) = CovRecord(chr, position, position, cov)
+            cnt += 1
+            position += 1
+          }
+          array
+        }
+      }
   }
 
 
   def children: Seq[SparkPlan] = Nil
 }
+

@@ -12,13 +12,18 @@ import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 import scala.collection.mutable
 import htsjdk.samtools._
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 //import com.intel.gkl.compression._
 
 import htsjdk.samtools.util.zip.InflaterFactory
 import java.util.zip.Inflater
 
 
-case class CovRecord(contigName:String,start:Int,end:Int, cov:Short)
+case class CovRecord(contigName:String, start:Int, end:Int, cov:Short) extends Ordered[CovRecord] {
+
+  override def compare(that: CovRecord): Int = this.start compare that.start
+}
+
 
 object CoverageMethodsMos {
 
@@ -137,10 +142,12 @@ object CoverageMethodsMos {
             prevCov = cov
           }
           i+= 1
+
         }
         result.take(ind).iterator
       })
     }.flatMap(r=>r)
+
   }
 
   //contigName,covArray,minPos,maxPos,contigLenth,maxCigarLength
@@ -184,6 +191,7 @@ object CoverageMethodsMos {
 
    }
   }
+
 
 
 
