@@ -1,18 +1,15 @@
 package org.biodatageeks.preprocessing.coverage
 
-import org.apache.hadoop.io.LongWritable
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.{GenerateUnsafeProjection, GenerateUnsafeRowJoiner}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, UnsafeProjection, UnsafeRow}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkPlan
-import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
-import org.apache.spark.util.AccumulatorV2
 import org.biodatageeks.datasources.BAM.{BDGAlignFileReader, BDGSAMRecord}
 import org.biodatageeks.inputformats.BDGAlignInputFormat
 import org.biodatageeks.preprocessing.coverage.CoverageReadFunctions._
@@ -106,7 +103,11 @@ case class CoverageHistPlan(plan: LogicalPlan, spark: SparkSession, table:String
 
 
 
-case class UpdateStruct(upd:mutable.HashMap[(String,Int),(Option[Array[Short]],Short)], shrink:mutable.HashMap[(String,Int),(Int)])
+case class UpdateStruct(
+                         upd:mutable.HashMap[(String,Int),(Option[Array[Short]],Short)],
+                         shrink:mutable.HashMap[(String,Int),(Int)],
+                         minmax:mutable.HashMap[String,(Int,Int)]
+                       )
 
 object BDGTableFuncs{
 
@@ -147,101 +148,88 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
     lazy val alignments = readBAMFile(spark.sqlContext,samplePath)
 
     lazy val events = CoverageMethodsMos.readsToEventsArray(alignments)
-    lazy val reducedEvents = method.toLowerCase match {
-      case "mosdepth" => CoverageMethodsMos.reduceEventsArray(events.mapValues(r => (r._1, r._2, r._3, r._4)))
-      case "bdg" => {
-        val covUpdate = new CovUpdate(new ArrayBuffer[RightCovEdge](),new ArrayBuffer[ContigRange]())
-        val acc = new CoverageAccumulatorV2(covUpdate)
-        spark
-          .sparkContext
-          .register(acc, "CoverageAcc")
-        events
-          .persist(StorageLevel.MEMORY_AND_DISK)
-          .foreach{
-            c => {
-              val maxCigarLength = c._2._5
-              val covToUpdate = c._2._1.takeRight(maxCigarLength)
-              val minPos = c._2._2
-              val maxPos = c._2._3
-              val startPoint = maxPos - maxCigarLength
-              val contigName = c._1
-              val right = RightCovEdge(contigName,minPos,startPoint, covToUpdate, c._2._1.sum)
-              val left = ContigRange(contigName, minPos, maxPos)
-              val cu = new CovUpdate(ArrayBuffer(right), ArrayBuffer(left))
-              acc.add(cu)
+
+    val covUpdate = new CovUpdate(new ArrayBuffer[RightCovEdge](), new ArrayBuffer[ContigRange]())
+    val acc = new CoverageAccumulatorV2(covUpdate)
+    spark
+      .sparkContext
+      .register(acc, "CoverageAcc")
+    events
+      .persist(StorageLevel.MEMORY_AND_DISK)
+      .foreach {
+        c => {
+          val maxCigarLength = c._2._5
+          val covToUpdate = c._2._1.takeRight(maxCigarLength)
+          val minPos = c._2._2
+          val maxPos = c._2._3
+          val startPoint = maxPos - maxCigarLength
+          val contigName = c._1
+          val right = RightCovEdge(contigName, minPos, startPoint, covToUpdate, c._2._1.sum)
+          val left = ContigRange(contigName, minPos, maxPos)
+          val cu = new CovUpdate(ArrayBuffer(right), ArrayBuffer(left))
+          acc.add(cu)
+        }
+      }
+
+    def prepareBroadcast(a: CovUpdate) = {
+      val contigRanges = a.left
+      val updateArray = a.right
+      val updateMap = new mutable.HashMap[(String, Int), (Option[Array[Short]], Short)]()
+      val shrinkMap = new mutable.HashMap[(String, Int), (Int)]()
+      val minmax = new mutable.HashMap[String, (Int, Int)]()
+
+      contigRanges.foreach {
+        c =>
+          val contig = c.contigName
+          if (!minmax.contains(contig))
+            minmax += contig -> (Int.MaxValue, 0)
+
+          val upd = updateArray
+            .filter(f => (f.contigName == c.contigName && f.startPoint + f.cov.length > c.minPos) && f.minPos < c.minPos)
+            .headOption //should be always 1 or 0 elements
+        val cumSum = updateArray //cumSum of all contigRanges lt current contigRange
+          .filter(f => f.contigName == c.contigName && f.minPos < c.minPos)
+          .map(_.cumSum)
+          .sum
+          upd match {
+            case Some(u) => {
+              val overlapLength = (u.startPoint + u.cov.length) - c.minPos + 1
+              shrinkMap += (u.contigName, u.minPos) -> (c.minPos - u.minPos + 1)
+              updateMap += (c.contigName, c.minPos) -> (Some(u.cov.takeRight(overlapLength)), (cumSum - u.cov.takeRight(overlapLength).sum).toShort)
+            }
+            case None => {
+              updateMap += (c.contigName, c.minPos) -> (None, cumSum)
+
             }
           }
-//        acc
-//          .value()
-//          .right
-//          .foreach(r=>println(s"${r.contigName},${r.minPos},${r.startPoint},${r.cov.length}, ${r.cumSum}"))
-//
-//        acc
-//          .value()
-//          .left
-//          .foreach(r=>println(s"${r.contigName},${r.minPos},${r.maxPos}"))
-
-
-        def prepareBroadcast(a: CovUpdate) = {
-          val contigRanges = a.left
-          val updateArray = a.right
-          val updateMap = new mutable.HashMap[(String,Int),(Option[Array[Short]],Short)]()
-          val shrinkMap =  new mutable.HashMap[(String,Int),(Int)]()
-          contigRanges.foreach{
-            c =>
-              val upd = updateArray
-                .filter(f=> (f.contigName == c.contigName && f.startPoint + f.cov.length > c.minPos) && f.minPos < c.minPos)
-                .headOption //should be always 1 or 0 elements
-              val cumSum = updateArray //cumSum of all contigRanges lt current contigRange
-                .filter(f => f.contigName == c.contigName && f.minPos < c.minPos)
-                .map(_.cumSum)
-                .sum
-              upd match {
-                case Some(u)  => {
-                  val overlapLength = (u.startPoint + u.cov.length) - c.minPos + 1
-                  shrinkMap += (u.contigName, u.minPos) -> (c.minPos - u.minPos +1 )
-                  updateMap += (c.contigName, c.minPos) -> (Some(u.cov.takeRight(overlapLength)), (cumSum - u.cov.takeRight(overlapLength).sum).toShort)
-                }
-                case None => {
-                  updateMap += (c.contigName, c.minPos) -> (None, cumSum)
-
-                }
-              }
-          }
-
-          UpdateStruct(updateMap, shrinkMap)
-        }
-
-        val covBroad = spark.sparkContext.broadcast(prepareBroadcast(acc.value()))
-         CoverageMethodsMos.upateContigRange(covBroad,events)
-
+          if (c.minPos < minmax(contig)._1)
+            minmax(contig) = (c.minPos, minmax(contig)._2)
+          if (c.maxPos > minmax(contig)._2)
+            minmax(contig) = (minmax(contig)._1, c.maxPos)
       }
-      case _ => throw new Exception("Unsupported coverage method")
-    }
-    lazy val cov = CoverageMethodsMos.eventsToCoverage(sampleId,reducedEvents)
 
-    // add first block, starting from 0 // FIXME, do it if parameter is set
-
-    val first = cov.takeOrdered(1).head
-
-    val additionalBlock = {
-      if (first.start > 1) spark.sparkContext.parallelize(Seq(CovRecord(first.contigName, 1, first.start, 0)))
-      else spark.sparkContext.emptyRDD[CovRecord]
+      UpdateStruct(updateMap, shrinkMap, minmax)
     }
 
-    val covAppended = additionalBlock.union(cov)
+    val covBroad = spark.sparkContext.broadcast(prepareBroadcast(acc.value()))
 
+    lazy val reducedEvents = CoverageMethodsMos.upateContigRange(covBroad, events)
 
-    {
+    val blocksResult = {
       result.toLowerCase() match {
         case "blocks" | "" | null =>
-          covAppended
+          true
         case "bases" =>
-          convertBlocksToBases(covAppended)
+          false
         case _ =>
           throw new Exception ("Unsupported parameter for coverage calculation")
       }
-    }.mapPartitions(p => {
+    }
+    val allPos = spark.sqlContext.getConf("spark.biodatageeks.coverage.allPositions", "false").toBoolean
+
+    lazy val cov = CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos)
+
+    cov.mapPartitions(p => {
       val proj = UnsafeProjection.create(schema)
       p.map(r => proj.apply(InternalRow.fromSeq(Seq(/*UTF8String.fromString(sampleId),*/
         UTF8String.fromString(r.contigName), r.start, r.end, r.cov))))
@@ -258,12 +246,12 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
           val end = r.end
           val cov = r.cov
 
-          val array = new Array[CovRecord](end - start)
+          val array = new Array[CovRecord](end - start + 1)
 
           var cnt = 0
           var position = start
 
-          while (position < end) {
+          while (position <= end) {
             array(cnt) = CovRecord(chr, position, position, cov)
             cnt += 1
             position += 1
@@ -272,7 +260,6 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
         }
       }
   }
-
 
   def children: Seq[SparkPlan] = Nil
 }

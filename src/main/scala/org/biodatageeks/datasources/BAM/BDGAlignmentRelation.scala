@@ -112,7 +112,7 @@ trait BDGAlignFileReader [T <: BDGAlignInputFormat]{
     val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
     val statuses = fs.globStatus(new org.apache.hadoop.fs.Path(path))
     val resolvedPath = statuses.head.getPath.toString
-    println(resolvedPath)
+    //println(resolvedPath)
     if(!spark.sqlContext.getConf("spark.biodatageeks.bam.useSparkBAM","false").toBoolean)
       spark.sparkContext
         .newAPIHadoopFile[LongWritable, SAMRecordWritable, T](path)
