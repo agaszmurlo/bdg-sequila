@@ -216,15 +216,15 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
 
     val blocksResult = {
       result.toLowerCase() match {
-        case "blocks" | "" | null =>
+        case BDGInternalParams.CoverageResultTypeBlocks | "" | null =>
           true
-        case "bases" =>
+        case BDGInternalParams.CoverageResultTypeBases =>
           false
         case _ =>
           throw new Exception ("Unsupported parameter for coverage calculation")
       }
     }
-    val allPos = spark.sqlContext.getConf(BDGInternalParams.ShowAllPositions, "false").toBoolean
+    val allPos = spark.sqlContext.getConf(BDGInternalParams.CoverageShowAllPositions, "false").toBoolean
 
     lazy val cov = CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos)
 

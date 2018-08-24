@@ -10,9 +10,12 @@ object BDGInternalParams {
   final val BAMCTASOutputPath = "spark.biodatageeks.bam.output_path"
   final val BAMCTASCmd = "spark.biodatageeks.bam.bam_ctas_cmd"
 
-  /*refenenced column*/
+  /*referenced column*/
   final val SAMPLE_COLUMN_NAME = "sampleId"
 
   /* parameter determining whether all positions in contig are included in output */
-  final val ShowAllPositions = "spark.biodatageeks.coverage.allPositions"
+  final val CoverageShowAllPositions = "spark.biodatageeks.coverage.allPositions"
+
+  final val CoverageResultTypeBlocks="blocks"
+  final val CoverageResultTypeBases="bases"
 }

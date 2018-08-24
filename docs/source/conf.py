@@ -40,11 +40,11 @@ project_name = u'bdg-sequila'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+   'rst2pdf.pdfbuilder',
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
-    'sphinxcontrib.github_ribbon',
+    'sphinxcontrib.github_ribbon'
 #    'sphinx.ext.ifconfig',
-   'rst2pdf.pdfbuilder'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

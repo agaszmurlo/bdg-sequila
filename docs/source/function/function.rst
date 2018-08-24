@@ -204,22 +204,28 @@ It returns range with start and end fields. A sample query using the reflect fun
 bdg_coverage
 ************
 
-In order to compute coverage for a sample one can run a set of queries as follows:
+bdg_coverage is a function that calculates depth of coverage for specified sample. It can return results in blocks (which is default, more efficient behaviour) or with per base granularity. 
+
 
 .. code-block:: scala
 
-    val tableNameBAM = "reads"
-    val bamPath = "/data/samples/*.bam"
-    ss.sql("CREATE DATABASE dna")
-    ss.sql("USE dna")
-    ss.sql(
-            s"""
-               |CREATE TABLE ${tableNameBAM}
-               |USING org.biodatageeks.datasources.BAM.BAMDataSource
-               |OPTIONS(path "${bamPath}")
-               |
-          """.stripMargin)
-    ss.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878')").show(5)
+  val tableNameBAM = "reads"
+  val bamPath = "file:///Users/aga/workplace/data/NA12878.chr21.bam"
+  ss.sql("CREATE DATABASE dna")
+  ss.sql("USE dna")
+
+  // CREATE TABLE USING DATASOURCE  
+  ss.sql(
+        s"""
+           |CREATE TABLE ${tableNameBAM}
+           |USING org.biodatageeks.datasources.BAM.BAMDataSource
+           |OPTIONS(path "${bamPath}")
+           |
+      """.stripMargin)
+      
+  //CALCULATE COVERAGE - BLOCKS RESULT
+
+  ss.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878.chr21', 'bdg', 'blocks')").show(5)
 
             +----------+-----+---+--------+
             |contigName|start|end|coverage|
@@ -230,6 +236,22 @@ In order to compute coverage for a sample one can run a set of queries as follow
             |      chr1|   38| 40|       4|
             |      chr1|   41| 49|       5|
             +----------+-----+---+--------+
+
+
+  //CALCULATE COVERAGE - BASES RESULT
+
+  ss.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878.chr21', 'bdg', 'bases')").show(5)
+  
+            +----------+-----+--------+
+            |contigName|start|coverage|
+            +----------+-----+--------+
+            |      chr1|   34|       1|
+            |      chr1|   35|       2|
+            |      chr1|   36|       3|
+            |      chr1|   37|       3|
+            |      chr1|   38|       4|
+            +----------+-----+--------+
+
 
 
 Functional parameteres

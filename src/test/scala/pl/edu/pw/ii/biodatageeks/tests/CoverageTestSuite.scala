@@ -82,8 +82,8 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
 
 
-    session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"true")
-    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')")
+    session.sqlContext.setConf(BDGInternalParams.CoverageShowAllPositions,"true")
+    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', '${BDGInternalParams.CoverageResultTypeBlocks}')")
     bdg.show()
     assert(bdg.first().get(1)==1) // first position should be one
 
@@ -94,8 +94,8 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     SequilaRegister.register(session)
     //session.sparkContext.setLogLevel("DEBUG")
 
-    session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
-    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')")
+    session.sqlContext.setConf(BDGInternalParams.CoverageShowAllPositions,"false")
+    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', '${BDGInternalParams.CoverageResultTypeBlocks}' )")
     bdg.show()
     assert(bdg.first().get(1)!=1) // first position should not be one
 
@@ -105,8 +105,8 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
-    session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
-    val bdg = session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'bases')")
+    session.sqlContext.setConf(BDGInternalParams.CoverageShowAllPositions,"false")
+    val bdg = session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', '${BDGInternalParams.CoverageResultTypeBases}')")
     bdg.show()
     assert(bdg.first().get(1)!=1) // first position should not be one
   }
@@ -115,7 +115,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
-    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')")
+    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', '${BDGInternalParams.CoverageResultTypeBlocks}')")
     assert(bdg.first().get(1)!=1) // first position should not be one
 
   }
@@ -124,7 +124,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
-    spark.time {session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'bases')").count}
+    spark.time {session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', '${BDGInternalParams.CoverageResultTypeBlocks}')").count}
 
   }
 
@@ -132,7 +132,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
-    spark.time {session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')").count}
+    spark.time {session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', '${BDGInternalParams.CoverageResultTypeBlocks}')").count}
   }
 
   test("BAM - bdg_coverage - wrong param") {
@@ -146,7 +146,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
   test("CRAM - bdg_coverage - show"){
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
-    session.sql(s"SELECT * FROM bdg_coverage('${tableNameCRAM}','test','bdg', 'blocks') ").show(5)
+    session.sql(s"SELECT * FROM bdg_coverage('${tableNameCRAM}','test','bdg', '${BDGInternalParams.CoverageResultTypeBlocks}') ").show(5)
 
   }
   after{
