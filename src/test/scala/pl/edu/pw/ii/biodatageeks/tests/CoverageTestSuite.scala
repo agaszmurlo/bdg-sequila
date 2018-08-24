@@ -6,13 +6,12 @@ import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import org.apache.spark.sql.{SequilaSession, SparkSession}
 import org.bdgenomics.utils.instrumentation.{Metrics, MetricsListener, RecordedMetrics}
 import org.biodatageeks.preprocessing.coverage.CoverageStrategy
-import org.biodatageeks.utils.SequilaRegister
+import org.biodatageeks.utils.{BDGInternalParams, SequilaRegister}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
 class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext{
 
     val bamPath = getClass.getResource("/NA12878.slice.bam").getPath
- //  val bamPath = getClass.getResource("/NA12878.chr21.bam").getPath
     val adamPath = getClass.getResource("/NA12878.slice.adam").getPath
     val metricsListener = new MetricsListener(new RecordedMetrics())
     val writer = new PrintWriter(new OutputStreamWriter(System.out))
@@ -83,7 +82,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
 
 
-    session.sqlContext.setConf("spark.biodatageeks.coverage.allPositions","true")
+    session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"true")
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')")
     bdg.show()
     assert(bdg.first().get(1)==1) // first position should be one
@@ -95,7 +94,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     SequilaRegister.register(session)
     //session.sparkContext.setLogLevel("DEBUG")
 
-    session.sqlContext.setConf("spark.biodatageeks.coverage.allPositions","false")
+    session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')")
     bdg.show()
     assert(bdg.first().get(1)!=1) // first position should not be one
@@ -106,7 +105,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
-    session.sqlContext.setConf("spark.biodatageeks.coverage.allPositions","false")
+    session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
     val bdg = session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'bases')")
     bdg.show()
     assert(bdg.first().get(1)!=1) // first position should not be one
@@ -117,7 +116,6 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     SequilaRegister.register(session)
 
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')")
-    bdg.show()
     assert(bdg.first().get(1)!=1) // first position should not be one
 
   }
@@ -140,7 +138,6 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
   test("BAM - bdg_coverage - wrong param") {
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
-
     assertThrows[Exception](
       session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blaaaaaah')").show(10))
 

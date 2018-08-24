@@ -224,7 +224,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
           throw new Exception ("Unsupported parameter for coverage calculation")
       }
     }
-    val allPos = spark.sqlContext.getConf("spark.biodatageeks.coverage.allPositions", "false").toBoolean
+    val allPos = spark.sqlContext.getConf(BDGInternalParams.ShowAllPositions, "false").toBoolean
 
     lazy val cov = CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos)
 
