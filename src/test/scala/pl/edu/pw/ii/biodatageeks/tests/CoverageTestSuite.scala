@@ -94,7 +94,6 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
     //session.sparkContext.setLogLevel("DEBUG")
-    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
 
     session.sqlContext.setConf("spark.biodatageeks.coverage.allPositions","false")
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')")
@@ -107,20 +106,15 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
-    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
-
     session.sqlContext.setConf("spark.biodatageeks.coverage.allPositions","false")
     val bdg = session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'bases')")
     bdg.show()
     assert(bdg.first().get(1)!=1) // first position should not be one
-    //bdg.toDF.coalesce(1).write.format("csv").option("delimiter", "\t").save("file:///Users/aga/workplace/data/coverage/bdgtest.tsv")
-
   }
 
   test("BAM - bdg_coverage - block - no configuration"){
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
-    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
 
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')")
     bdg.show()
@@ -132,8 +126,6 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
-    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
-
     spark.time {session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'bases')").count}
 
   }
@@ -142,16 +134,12 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
-    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
-
     spark.time {session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blocks')").count}
   }
 
   test("BAM - bdg_coverage - wrong param") {
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
-
-    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
 
     assertThrows[Exception](
       session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878','bdg', 'blaaaaaah')").show(10))
@@ -161,7 +149,6 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
   test("CRAM - bdg_coverage - show"){
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
-    session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
     session.sql(s"SELECT * FROM bdg_coverage('${tableNameCRAM}','test','bdg', 'blocks') ").show(5)
 
   }

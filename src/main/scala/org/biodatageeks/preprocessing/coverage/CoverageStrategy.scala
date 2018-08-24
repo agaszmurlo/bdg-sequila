@@ -40,9 +40,9 @@ class CoverageStrategy(spark: SparkSession) extends Strategy with Serializable  
         case Some(f) => {
 
           if (f == BDGInputDataType.BAMInputDataType)
-            BDGCoveragePlan[BAMBDGInputFormat](plan, spark, tableName, sampleId, method, output) :: Nil
+            BDGCoveragePlan[BAMBDGInputFormat](plan, spark, tableName, sampleId, method, result, output) :: Nil
           else if (f == BDGInputDataType.CRAMInputDataType)
-            BDGCoveragePlan[CRAMBDGInputFormat](plan, spark, tableName, sampleId, method, output) :: Nil
+            BDGCoveragePlan[CRAMBDGInputFormat](plan, spark, tableName, sampleId, method, result, output) :: Nil
           else Nil
         }
         case None => throw new Exception("Only BAM and CRAM file formats are supported in bdg_coverage.")
@@ -117,7 +117,7 @@ case class UpdateStruct(
 
 case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: SparkSession,
                                                     table:String, sampleId:String, method: String, result:String, output: Seq[Attribute])(implicit c: ClassTag[T])
-  extends SparkPlan with Serializable  with BDGAlignFileReader [T]{
+  extends SparkPlan with Serializable  with BDGAlignFileReaderWriter [T]{
 
 
   def doExecute(): org.apache.spark.rdd.RDD[InternalRow] = {
