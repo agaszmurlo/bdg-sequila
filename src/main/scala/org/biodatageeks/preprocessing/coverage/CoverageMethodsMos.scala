@@ -72,8 +72,8 @@ object CoverageMethodsMos {
             if (!contigLengthMap.contains(contig)) { //FIXME: preallocate basing on header, n
               val contigLength = read.getHeader.getSequence(contig).getSequenceLength
               contigLengthMap += contig -> contigLength
-              //contigEventsMap += contig -> (new Array[Short](contigLength-read.getStart+10), read.getStart,contigLength-1, contigLength)
-              contigEventsMap += contig -> (new Array[Short](contigLength+10), read.getStart,contigLength-1, contigLength)
+              contigEventsMap += contig -> (new Array[Short](contigLength-read.getStart+10), read.getStart,contigLength-1, contigLength)
+              //contigEventsMap += contig -> (new Array[Short](contigLength+10), read.getStart,contigLength-1, contigLength)
               contigStartStopPartMap += s"${contig}_start" -> read.getStart
               cigarMap += contig -> 0
             }
