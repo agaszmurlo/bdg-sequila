@@ -11,7 +11,7 @@ import org.apache.log4j.Logger
 
 
 abstract class AbstractCovRecord {
-  val key = this.hashCode() ///FIXME: key should only hash of contigName,start,end
+  val key = (this.contigName+this.start.toString+this.end.toString).hashCode
   def contigName: String
   def start: Int
   def end: Int
@@ -25,6 +25,7 @@ abstract class AbstractCovRecord {
     }
     else false
   }
+
 
 }
 
@@ -144,7 +145,7 @@ object CoverageMethodsMos {
   }
 
 
-  @inline def addFirstBlock (contig:String, contigMin: Int, posShift: Int, blocksResult:Boolean, allPos:Boolean, ind: Int,result: Array[CovRecord]) = {
+  @inline def addFirstBlock (contig:String, contigMin: Int, posShift: Int, blocksResult:Boolean, allPos:Boolean, ind: Int,result: Array[AbstractCovRecord]) = {
     var indexShift = ind
 
     if (allPos && posShift == contigMin) {
@@ -162,7 +163,7 @@ object CoverageMethodsMos {
     indexShift
   }
 
-  @inline def addLastBlock(contig: String, contigMax: Int, contigLength: Int, maxPosition: Int, blocksResult: Boolean,  allPos:Boolean, ind: Int, result: Array[CovRecord]) = {
+  @inline def addLastBlock(contig: String, contigMax: Int, contigLength: Int, maxPosition: Int, blocksResult: Boolean,  allPos:Boolean, ind: Int, result: Array[AbstractCovRecord]) = {
     var indexShift = ind
     if (allPos && maxPosition == contigMax) {
       logger.debug(s"Adding last block for index: ${indexShift}, start: ${maxPosition} end: ${contigLength}, cov: 0")
@@ -191,7 +192,9 @@ object CoverageMethodsMos {
         var ind = 0
         val posShift = r._2._2
         val maxPosition = r._2._3
+        var covSum = 0
 
+        println("posShift in partition " + posShift)
 
         val firstBlockMaxLength = posShift-1
         val lastBlockMaxLength = r._2._4 - maxPosition //TODO: double check meaning of maxCigar
@@ -199,7 +202,7 @@ object CoverageMethodsMos {
         // preallocate maximum size of result, assuming first and last blocks are added in perbase manner
         //IDEA: consider counting size within if-else statements
 
-        val result = new Array[CovRecord](firstBlockMaxLength + covArrayLength + lastBlockMaxLength)
+        val result = new Array[AbstractCovRecord](firstBlockMaxLength + covArrayLength + lastBlockMaxLength)
 
         logger.info (s"size: ${firstBlockMaxLength + covArrayLength + lastBlockMaxLength}")
 
@@ -207,8 +210,8 @@ object CoverageMethodsMos {
         var prevCov = 0
         var blockLength = 0
 
-        // add first block if necessary (if current positionshift is equal to the earliest read in the contig)
-        ind = addFirstBlock(contig, contigMinMap(contig)._1, posShift, blocksResult, allPos, ind, result)
+        if (windowLength ==None)
+          ind = addFirstBlock(contig, contigMinMap(contig)._1, posShift, blocksResult, allPos, ind, result)  // add first block if necessary (if current positionshift is equal to the earliest read in the contig)
 
 
         while(i < covArrayLength){
@@ -229,10 +232,33 @@ object CoverageMethodsMos {
             blockLength += 1
             prevCov = cov
           }
+          else if (windowLength != None) {
+
+            if ((i+posShift) % windowLength.get == 0 && (i+posShift) > 0) {
+              val windowStart = ( ( (i+posShift) / windowLength.get) - 1) * windowLength.get
+              val windowEnd = windowStart + windowLength.get - 1
+              result(ind) = CovRecordWindow(contig, windowStart , windowEnd, (covSum/windowLength.get).toShort, Some (windowLength.get))
+              covSum=0
+              ind += 1
+
+            }
+            covSum += cov
+          }
           i+= 1
         }
 
-        ind = addLastBlock (contig, contigMinMap(contig)._2, r._2._4, maxPosition, blocksResult, allPos, ind, result)
+        if (windowLength !=None && i%windowLength.get != 0) { // add last window
+          val windowStart = ( ( (i+posShift) / windowLength.get) - 1) * windowLength.get
+          val windowEnd = windowStart + windowLength.get - 1
+          val lastWindowLength = i%windowLength.get
+
+
+          result(ind) = CovRecordWindow(contig, windowStart, windowEnd, (covSum / lastWindowLength).toShort, Some (lastWindowLength))
+          println(s" ${result(ind).contigName}, ${result(ind).start}, ${result(ind).end}  ")
+        }
+
+        if (windowLength == None)
+          ind = addLastBlock (contig, contigMinMap(contig)._2, r._2._4, maxPosition, blocksResult, allPos, ind, result)
 
         result.take(ind).iterator
       })
