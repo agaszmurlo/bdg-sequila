@@ -194,7 +194,7 @@ object CoverageMethodsMos {
         val maxPosition = r._2._3
         var covSum = 0
 
-        println("posShift in partition " + posShift)
+        ///println("posShift in partition " + posShift)
 
         val firstBlockMaxLength = posShift-1
         val lastBlockMaxLength = r._2._4 - maxPosition //TODO: double check meaning of maxCigar
@@ -254,7 +254,7 @@ object CoverageMethodsMos {
 
 
           result(ind) = CovRecordWindow(contig, windowStart, windowEnd, (covSum / lastWindowLength).toShort, Some (lastWindowLength))
-          println(s" ${result(ind).contigName}, ${result(ind).start}, ${result(ind).end}  ")
+          //println(s" ${result(ind).contigName}, ${result(ind).start}, ${result(ind).end}  ")
         }
 
         if (windowLength == None)
