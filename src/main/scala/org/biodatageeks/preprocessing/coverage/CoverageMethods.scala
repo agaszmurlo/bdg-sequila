@@ -32,10 +32,10 @@ abstract class AbstractCovRecord {
 
 case class CovRecord(val contigName:String, val start:Int,val end:Int, val cov:Short)
   extends AbstractCovRecord
-    with Ordered[CovRecord] {
-
-  override def compare(that: CovRecord): Int = this.start compare that.start
-}
+//    with Ordered[CovRecord] {
+//
+//  override def compare(that: CovRecord): Int = this.start compare that.start
+//}
 
 //for various coverage windows operations
 case class CovRecordWindow(val contigName:String, val start:Int,val end:Int, val cov:Short, val overLap:Option[Int] = None)
