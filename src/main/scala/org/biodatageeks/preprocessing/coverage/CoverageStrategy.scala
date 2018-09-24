@@ -63,10 +63,19 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
 
   def doExecute(): org.apache.spark.rdd.RDD[InternalRow] = {
 
+//    spark
+//      .sparkContext
+//      .getPersistentRDDs
+//      .foreach(_._2.unpersist()) //FIXME: add filtering not all RDDs
+
     spark
       .sparkContext
       .getPersistentRDDs
-        .foreach(_._2.unpersist()) //FIXME: add filtering not all RDDs
+      .filter((t)=> t._2.name==BDGInternalParams.RDDEventsName)
+      .foreach(_._2.unpersist())
+
+//    println(spark.sparkContext.getRDDStorageInfo.length)
+
     val schema = plan.schema
     val sampleTable = BDGTableFuncs
       .getTableMetadata(spark,table)
@@ -115,6 +124,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
           acc.add(cu)
         }
       }
+    events.setName(BDGInternalParams.RDDEventsName)
 
     def prepareBroadcast(a: CovUpdate) = {
 

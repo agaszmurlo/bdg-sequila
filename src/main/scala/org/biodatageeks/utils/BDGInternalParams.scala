@@ -17,4 +17,6 @@ object BDGInternalParams {
   final val ShowAllPositions = "spark.biodatageeks.coverage.allPositions"
 
   final val filterReadsByFlag = "spark.biodatageeks.coverage.filterFlag"
+
+  final val RDDEventsName="org.biodatageeks.events"
 }
