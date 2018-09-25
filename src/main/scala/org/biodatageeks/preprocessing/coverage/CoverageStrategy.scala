@@ -197,9 +197,9 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
             CovRecordWindow(a.contigName,
               a.start,
               a.end,
-              Right((a.asInstanceOf[CovRecordWindow].overLap.get * a.cov.right.get + b.asInstanceOf[CovRecordWindow].overLap.get * b.cov.right.get )/
-                (a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get)),
-              Some(a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get)))
+              (a.asInstanceOf[CovRecordWindow].overLap.get * a.asInstanceOf[CovRecordWindow].cov + b.asInstanceOf[CovRecordWindow].overLap.get * b.asInstanceOf[CovRecordWindow].cov )/
+                (a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get),
+              Some(a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get) ) )
           .map(_._2)
 
        else
@@ -219,13 +219,13 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
       cov.mapPartitions(p => {
         val proj = UnsafeProjection.create(schema)
         p.map(r => proj.apply(InternalRow.fromSeq(Seq(
-          UTF8String.fromString(r.contigName), r.start, r.end, r.cov.right.get))))
+          UTF8String.fromString(r.contigName), r.start, r.end, r.asInstanceOf[CovRecordWindow].cov))))
       })
     } else { // regular blocks
       cov.mapPartitions(p => {
         val proj = UnsafeProjection.create(schema)
         p.map(r => proj.apply(InternalRow.fromSeq(Seq(/*UTF8String.fromString(sampleId),*/
-          UTF8String.fromString(r.contigName), r.start, r.end, r.cov.left.get))))
+          UTF8String.fromString(r.contigName), r.start, r.end, r.asInstanceOf[CovRecord].cov))))
       })
     }
 

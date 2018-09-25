@@ -155,48 +155,15 @@ object ResolveTableValuedFunctionsSeq extends Rule[LogicalPlan] {
 object BDGCoverage {
   def apply(tableName:String, sampleId:String, result: String, target: Option[String]): BDGCoverage = {
 
-    val maybeWindowLength =
-      try {
-        target match {
-          case Some(t) => Some(t.toInt)
-          case _ => None
-        }
-      } catch {
-        case e: Exception => None
-      }
+    val output = StructType(Seq(
+      StructField("contigName",StringType,nullable = true),
+      StructField("start",IntegerType,nullable = false),
+      StructField("end",IntegerType,nullable = false),
+      target match {
+        case Some(t) =>  StructField("coverage",FloatType,nullable = false)
+        case None =>     StructField("coverage",ShortType,nullable = false)
+   })).toAttributes
 
-    val output = {
-      if (maybeWindowLength == None) { // regular blocks --> coverage is Short
-        StructType(Seq(
-          //StructField("sampleId", StringType, nullable = false),
-          StructField("contigName",StringType,nullable = true),
-          StructField("start",IntegerType,nullable = false),
-          StructField("end",IntegerType,nullable = false),
-          StructField("coverage",ShortType,nullable = false)
-        )
-        ).toAttributes
-
-      } else {                  // windows -> coverage is Float
-        StructType(Seq(
-          //StructField("sampleId", StringType, nullable = false),
-          StructField("contigName",StringType,nullable = true),
-          StructField("start",IntegerType,nullable = false),
-          StructField("end",IntegerType,nullable = false),
-          StructField("coverage",FloatType,nullable = false)
-        )
-        ).toAttributes
-
-      }
-    }
-//
-//    val output = StructType(Seq(
-//      //StructField("sampleId", StringType, nullable = false),
-//      StructField("contigName",StringType,nullable = true),
-//      StructField("start",IntegerType,nullable = false),
-//      StructField("end",IntegerType,nullable = false),
-//      StructField("coverage",FloatType,nullable = false)
-//    )
-//    ).toAttributes
     new BDGCoverage(tableName:String,sampleId.toString, result, target, output)
   }
 
