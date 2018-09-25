@@ -214,18 +214,18 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
 //        UTF8String.fromString("Aaaa"), 3, 3, 5.toShort))))
 //    })
 
-    if(maybeWindowLength != None) {
+    if(maybeWindowLength != None) {   // windows
 
       cov.mapPartitions(p => {
         val proj = UnsafeProjection.create(schema)
         p.map(r => proj.apply(InternalRow.fromSeq(Seq(
           UTF8String.fromString(r.contigName), r.start, r.end, r.cov.right.get))))
       })
-    } else {
+    } else { // regular blocks
       cov.mapPartitions(p => {
         val proj = UnsafeProjection.create(schema)
         p.map(r => proj.apply(InternalRow.fromSeq(Seq(/*UTF8String.fromString(sampleId),*/
-          UTF8String.fromString(r.contigName), r.start, r.end, r.cov.left.get.toFloat))))
+          UTF8String.fromString(r.contigName), r.start, r.end, r.cov.left.get))))
       })
     }
 
