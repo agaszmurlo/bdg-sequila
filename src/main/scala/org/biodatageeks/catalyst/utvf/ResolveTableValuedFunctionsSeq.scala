@@ -159,7 +159,7 @@ object BDGCoverage {
       StructField("contigName",StringType,nullable = true),
       StructField("start",IntegerType,nullable = false),
       StructField("end",IntegerType,nullable = false),
-      StructField("coverage",ShortType,nullable = false)
+      StructField("coverage",FloatType,nullable = false)
     )
     ).toAttributes
     new BDGCoverage(tableName:String,sampleId.toString, result, target, output)

@@ -15,30 +15,18 @@ abstract class AbstractCovRecord {
   def contigName: String
   def start: Int
   def end: Int
-  def cov: Short
-
-
-//  override def equals(obj:Any) = {
-//    if(obj.isInstanceOf[AbstractCovRecord]) {
-//     val cov = obj.asInstanceOf[AbstractCovRecord]
-//      if(cov.contigName == this.contigName && cov.start == this.start && cov.end == this.end) true else false
-//    }
-//    else false
-//  }
+  def cov: Either[Short,Float]
 
 
 }
 
 
-case class CovRecord(val contigName:String, val start:Int,val end:Int, val cov:Short)
+case class CovRecord(val contigName:String, val start:Int,val end:Int, val cov:Either[Short,Float])
   extends AbstractCovRecord
-//    with Ordered[CovRecord] {
-//
-//  override def compare(that: CovRecord): Int = this.start compare that.start
-//}
+
 
 //for various coverage windows operations
-case class CovRecordWindow(val contigName:String, val start:Int,val end:Int, val cov:Short, val overLap:Option[Int] = None)
+case class CovRecordWindow(val contigName:String, val start:Int,val end:Int, val cov:Either[Short,Float], val overLap:Option[Int] = None)
 extends AbstractCovRecord
 
 object CoverageMethodsMos {
@@ -151,11 +139,11 @@ object CoverageMethodsMos {
     if (allPos && posShift == contigMin) {
       logger.info(s"Adding first block for index: ${indexShift}, start: 1 end: ${posShift - 1}, cov: 0")
       if (blocksResult) {
-        result(indexShift) = CovRecord(contig, 1, posShift - 1, 0) // add first block, from 1 to posShift-1
+        result(indexShift) = CovRecord(contig, 1, posShift - 1, Left(0)) // add first block, from 1 to posShift-1
         indexShift += 1
       } else {
         for (cnt <- 1 to posShift-1) {
-          result(indexShift) = CovRecord(contig, cnt, cnt, 0) // add first block, from 1 to posShift-1
+          result(indexShift) = CovRecord(contig, cnt, cnt, Left(0)) // add first block, from 1 to posShift-1
           indexShift += 1
         }
       }
@@ -168,11 +156,11 @@ object CoverageMethodsMos {
     if (allPos && maxPosition == contigMax) {
       logger.debug(s"Adding last block for index: ${indexShift}, start: ${maxPosition} end: ${contigLength}, cov: 0")
       if (blocksResult) {
-        result(indexShift) = CovRecord(contig, maxPosition, contigLength, 0)
+        result(indexShift) = CovRecord(contig, maxPosition, contigLength, Left(0))
         indexShift += 1
       } else {
         for (cnt <- maxPosition  to contigLength) {
-          result(indexShift) = CovRecord(contig, cnt, cnt, 0) // add first block, from 1 to posShift-1
+          result(indexShift) = CovRecord(contig, cnt, cnt, Left(0)) // add first block, from 1 to posShift-1
           indexShift += 1
         }
       }
@@ -219,13 +207,13 @@ object CoverageMethodsMos {
 
           if (!blocksResult && windowLength == None) {
             if (i!= covArrayLength - 1) { //HACK. otherwise we get doubled CovRecords for partition boundary index
-              result(ind) = CovRecord(contig, i + posShift, i + posShift, cov.toShort)
+              result(ind) = CovRecord(contig, i + posShift, i + posShift, Left(cov.toShort))
               ind += 1
             }
           }
           else if(windowLength == None) {
             if (prevCov >= 0 && prevCov != cov && i > 0) { // for the first element we do not write block
-              result(ind) = CovRecord(contig, i + posShift - blockLength, i + posShift - 1, prevCov.toShort)
+              result(ind) = CovRecord(contig, i + posShift - blockLength, i + posShift - 1, Left(prevCov.toShort))
               blockLength = 0
               ind += 1
             }
@@ -237,7 +225,7 @@ object CoverageMethodsMos {
             if ((i+posShift) % windowLength.get == 0 && (i+posShift) > 0) {
               val windowStart = ( ( (i+posShift) / windowLength.get) - 1) * windowLength.get
               val windowEnd = windowStart + windowLength.get - 1
-              result(ind) = CovRecordWindow(contig, windowStart , windowEnd, (covSum/windowLength.get).toShort, Some (windowLength.get))
+              result(ind) = CovRecordWindow(contig, windowStart , windowEnd, Right((covSum/windowLength.get)), Some (windowLength.get))
               covSum=0
               ind += 1
 
@@ -253,8 +241,9 @@ object CoverageMethodsMos {
           val lastWindowLength = i%windowLength.get
 
 
-          result(ind) = CovRecordWindow(contig, windowStart, windowEnd, (covSum / lastWindowLength).toShort, Some (lastWindowLength))
-          //println(s" ${result(ind).contigName}, ${result(ind).start}, ${result(ind).end}  ")
+          result(ind) = CovRecordWindow(contig, windowStart, windowEnd, Right((covSum / lastWindowLength)), Some (lastWindowLength))
+          println(s"\n######\n ${result(ind).contigName}, ${result(ind).start}, ${result(ind).end} , ${Right((covSum / lastWindowLength))} ")
+
         }
 
         if (windowLength == None)

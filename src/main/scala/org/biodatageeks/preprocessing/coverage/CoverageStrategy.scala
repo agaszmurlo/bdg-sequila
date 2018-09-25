@@ -63,18 +63,12 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
 
   def doExecute(): org.apache.spark.rdd.RDD[InternalRow] = {
 
-//    spark
-//      .sparkContext
-//      .getPersistentRDDs
-//      .foreach(_._2.unpersist()) //FIXME: add filtering not all RDDs
 
     spark
       .sparkContext
       .getPersistentRDDs
       .filter((t)=> t._2.name==BDGInternalParams.RDDEventsName)
       .foreach(_._2.unpersist())
-
-//    println(spark.sparkContext.getRDDStorageInfo.length)
 
     val schema = plan.schema
     val sampleTable = BDGTableFuncs
@@ -97,7 +91,6 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
     lazy val alignments = readBAMFile(spark.sqlContext,samplePath)
 
     val filterFlag = spark.sqlContext.getConf(BDGInternalParams.filterReadsByFlag, "1796").toInt
-
 
     lazy val events = CoverageMethodsMos.readsToEventsArray(alignments,filterFlag)
 
@@ -204,21 +197,37 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
             CovRecordWindow(a.contigName,
               a.start,
               a.end,
-              ((a.asInstanceOf[CovRecordWindow].overLap.get * a.cov + b.asInstanceOf[CovRecordWindow].overLap.get * b.cov )/
-                (a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get)).toShort,
+              Right((a.asInstanceOf[CovRecordWindow].overLap.get * a.cov.right.get + b.asInstanceOf[CovRecordWindow].overLap.get * b.cov.right.get )/
+                (a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get)),
               Some(a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get)))
           .map(_._2)
+
        else
         CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos,None, None)
 
 
+    //cov.take(10).foreach (p=> println(p.contigName + " " + p.start + " " + p.end + " " + p.cov))
 
+//    cov.mapPartitions(p => {
+//      val proj = UnsafeProjection.create(schema)
+//      p.map(r => proj.apply(InternalRow.fromSeq(Seq(
+//        UTF8String.fromString("Aaaa"), 3, 3, 5.toShort))))
+//    })
 
-    cov.mapPartitions(p => {
-      val proj = UnsafeProjection.create(schema)
-      p.map(r => proj.apply(InternalRow.fromSeq(Seq(/*UTF8String.fromString(sampleId),*/
-        UTF8String.fromString(r.contigName), r.start, r.end, r.cov))))
-    })
+    if(maybeWindowLength != None) {
+
+      cov.mapPartitions(p => {
+        val proj = UnsafeProjection.create(schema)
+        p.map(r => proj.apply(InternalRow.fromSeq(Seq(
+          UTF8String.fromString(r.contigName), r.start, r.end, r.cov.right.get))))
+      })
+    } else {
+      cov.mapPartitions(p => {
+        val proj = UnsafeProjection.create(schema)
+        p.map(r => proj.apply(InternalRow.fromSeq(Seq(/*UTF8String.fromString(sampleId),*/
+          UTF8String.fromString(r.contigName), r.start, r.end, r.cov.left.get.toFloat))))
+      })
+    }
 
   }
 
