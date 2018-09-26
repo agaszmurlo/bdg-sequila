@@ -206,13 +206,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
         CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos,None, None)
 
 
-    //cov.take(10).foreach (p=> println(p.contigName + " " + p.start + " " + p.end + " " + p.cov))
-
-//    cov.mapPartitions(p => {
-//      val proj = UnsafeProjection.create(schema)
-//      p.map(r => proj.apply(InternalRow.fromSeq(Seq(
-//        UTF8String.fromString("Aaaa"), 3, 3, 5.toShort))))
-//    })
+//    cov.take(10).foreach (p=> println(p.contigName + " " + p.start + " " + p.end + " " + p.asInstanceOf[CovRecordWindow].cov))
 
     if(maybeWindowLength != None) {   // windows
 

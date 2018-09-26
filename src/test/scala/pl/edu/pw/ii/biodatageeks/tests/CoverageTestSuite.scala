@@ -20,7 +20,6 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val refPath = getClass.getResource("/phix-illumina.fa").getPath
     val tableNameBAM = "reads"
     val tableNameMultiBAM = "readsMulti"
-    val tableNamePartitions = "readsParts"
     val tableNameADAM = "readsADAM"
     val tableNameCRAM = "readsCRAM"
     before{
@@ -67,101 +66,86 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     }
 
 
-  test("BAM - bdg_coverage - windowLength"){
-
-//    spark
-//      .sparkContext
-//      .hadoopConfiguration
-//      .setInt("mapred.min.split.size", (64200000).toInt)
-
+  test("BAM - bdg_coverage - windows"){
     val session: SparkSession = SequilaSession(spark)
-
-
     SequilaRegister.register(session)
 
-    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878', '', '10') ")
-    bdg.show()
-//    assert(bdg.first().get(1)==1) // first position should be one
+    val windowLength = 100
+    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878', '', '${windowLength}')")
+    bdg.show(5)
+
+    assert (bdg.count == 300)
+    assert (bdg.first().getInt(1) % windowLength == 0)
+    assert (bdg.first().getInt(2) % windowLength == windowLength - 1)
+    assert(bdg.where("start == 23500").first().getFloat(3)==0.52.toFloat)
+    assert(bdg.where("start == 2700").first().getFloat(3)==4.65.toFloat)
+    assert(bdg.where("start == 25100").first().getFloat(3)==0.0.toFloat)
 
   }
 
-
-
-  test("BAM - bdg_coverage - block - allPositions"){
+  test("BAM - bdg_coverage - blocks - allPositions"){
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
-    //session.sparkContext.setLogLevel("DEBUG")
     session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
 
 
     session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"true")
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blocks')")
-    bdg.show()
-    assert(bdg.first().get(1)==1) // first position should be one
+    bdg.show(5)
+
+    assert(bdg.count() == 12865)
+    assert(bdg.first().get(1) == 1) // first position should be one
+    assert(bdg.where("start == 257").first().getShort(3) == 2)
 
   }
 
-  test("BAM - bdg_coverage - block "){
+  test("BAM - bdg_coverage - blocks notAllPositions"){
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
-    //session.sparkContext.setLogLevel("DEBUG")
 
     session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
     val bdg = session.sql(s"SELECT *  FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blocks')")
-    bdg.show()
+    bdg.show(5)
 
-    assert(bdg.first().get(1)!=1) // first position should not be one
+    assert(bdg.count() == 12861)
+    assert(bdg.first().get(1) != 1) // first position should not be one
+    assert(bdg.where("start == 35").first().getShort(3) == 2)
 
   }
 
-  test("BAM - bdg_coverage - base - show"){
+  test("BAM - bdg_coverage - bases - notAllPositions"){
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
     session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
-    val bdg = session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'bases')")
-    bdg.show()
-    assert(bdg.first().get(1)!=1) // first position should not be one
-  }
+    val bdg = session.sql(s"SELECT contigName, start, end, coverage FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'bases')")
+    bdg.show(5)
 
-  test("BAM - bdg_coverage - block - no configuration"){
-    val session: SparkSession = SequilaSession(spark)
-    SequilaRegister.register(session)
-
-    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blocks')")
-    assert(bdg.first().get(1)!=1) // first position should not be one
-
-  }
-
-  test("BAM - bdg_coverage - base - count"){
-    val session: SparkSession = SequilaSession(spark)
-    SequilaRegister.register(session)
-
-    session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'bases')").count
-
-  }
-
-  test("BAM - bdg_coverage - blocks - count"){
-    val session: SparkSession = SequilaSession(spark)
-    SequilaRegister.register(session)
-
-    session.sql(s"SELECT contigName, start, coverage FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blocks')").count
-  }
-
-  test("BAM - bdg_coverage - wrong param") {
-    val session: SparkSession = SequilaSession(spark)
-    SequilaRegister.register(session)
-    assertThrows[Exception](
-      session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blaaaaaah')").show(10))
-
+    assert(bdg.count() == 26598)
+    assert(bdg.first().get(1) != 1) // first position should not be one
+    assert(bdg.where("start == 88").first().getShort(3) == 7)
   }
 
   test("CRAM - bdg_coverage - show"){
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
-    session.sql(s"SELECT * FROM bdg_coverage('${tableNameCRAM}','test', 'blocks') ").show(5)
 
+    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameCRAM}','test', 'blocks') ")
+    bdg.show(5)
+
+    assert(bdg.count() == 49)
+    assert(bdg.where("start == 107").first().getShort(3) == 459)
   }
+
+  test("BAM - bdg_coverage - wrong param, Exception should be thrown") {
+      val session: SparkSession = SequilaSession(spark)
+      SequilaRegister.register(session)
+
+      assertThrows[Exception](
+        session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blaaaaaah')").show())
+
+    }
+
   after{
 
     Metrics.print(writer, Some(metricsListener.metrics.sparkMetrics.stageTimes))

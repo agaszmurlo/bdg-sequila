@@ -34,7 +34,6 @@ object CoverageMethodsMos {
 
 
   def mergeArrays(a:(Array[Short],Int,Int,Int),b:(Array[Short],Int,Int,Int)) = {
-    //val c = new Array[Short](a._4)
     val c = new Array[Short](math.min(math.abs(a._2 - b._2) + math.max(a._1.length, b._1.length), a._4))
     val lowerBound = math.min(a._2, b._2)
 
@@ -43,10 +42,6 @@ object CoverageMethodsMos {
       c(i - lowerBound) = ((if (i >= a._2 && i < a._2 + a._1.length) a._1(i - a._2) else 0) + (if (i >= b._2 && i < b._2 + b._1.length) b._1(i - b._2) else 0)).toShort
       i += 1
     }
-    //    for(i<- lowerBound to c.length + lowerBound - 1 ){
-    //      c(i-lowerBound) = (( if(i >= a._2 && i < a._2+a._1.length) a._1(i-a._2) else 0)  + (if(i >= b._2 && i < b._2+b._1.length) b._1(i-b._2) else 0)).toShort
-    //    }
-
     (c, lowerBound, lowerBound + c.length, a._4)
   }
 
@@ -198,7 +193,8 @@ object CoverageMethodsMos {
         var prevCov = 0
         var blockLength = 0
 
-        if (windowLength ==None)
+
+        if (windowLength == None)
           ind = addFirstBlock(contig, contigMinMap(contig)._1, posShift, blocksResult, allPos, ind, result)  // add first block if necessary (if current positionshift is equal to the earliest read in the contig)
 
 
@@ -222,27 +218,28 @@ object CoverageMethodsMos {
           }
           else if (windowLength != None) {
 
-            if ((i+posShift) % windowLength.get == 0 && (i+posShift) > 0) {
-              val windowStart = ( ( (i+posShift) / windowLength.get) - 1) * windowLength.get
-              val windowEnd = windowStart + windowLength.get - 1
-              result(ind) = CovRecordWindow(contig, windowStart , windowEnd, (covSum/windowLength.get), Some (windowLength.get))
-              covSum=0
+            if ((i + posShift) % windowLength.get == 0 && (i + posShift) > 0) {
+              val winLen = windowLength.get
+              val windowStart = ( ( (i+posShift) / winLen) - 1) * winLen
+              val windowEnd = windowStart + winLen - 1
+              logger.debug (s"Writing CovRecordWindow. cov ${covSum} winLen ${windowLength} avg ${(covSum/windowLength.get.toFloat)}")
+              result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum/winLen.toFloat, Some (winLen))
+              covSum = 0
               ind += 1
-
             }
             covSum += cov
-          }
+             }
           i+= 1
         }
 
         if (windowLength !=None && i%windowLength.get != 0) { // add last window
-          val windowStart = ( ( (i+posShift) / windowLength.get) - 1) * windowLength.get
-          val windowEnd = windowStart + windowLength.get - 1
-          val lastWindowLength = i%windowLength.get
+          val winLen = windowLength.get
+          val windowStart = ( ( (i+posShift) / winLen) - 1) * windowLength.get
+          val windowEnd = windowStart + winLen - 1
+          val lastWindowLength = i%winLen
 
-
-          result(ind) = CovRecordWindow(contig, windowStart, windowEnd, (covSum / lastWindowLength), Some (lastWindowLength))
-          println(s"\n######\n ${result(ind).contigName}, ${result(ind).start}, ${result(ind).end} , ${Right((covSum / lastWindowLength))} ")
+          result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum/winLen.toFloat, Some (lastWindowLength))
+          logger.debug(s"Last window: ${result(ind).contigName}, ${result(ind).start}, ${result(ind).end} , ${Right((covSum / lastWindowLength))} ")
 
         }
 
