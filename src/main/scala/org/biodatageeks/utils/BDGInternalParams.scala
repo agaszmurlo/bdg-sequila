@@ -18,5 +18,7 @@ object BDGInternalParams {
 
   final val filterReadsByFlag = "spark.biodatageeks.coverage.filterFlag"
 
-  final val RDDEventsName="org.biodatageeks.events"
+  final val RDDEventsName = "spark.biodatageeks.events"
+
+  final val InputSplitSize = "spark.biodatageeks.bam.splitSize"
 }
