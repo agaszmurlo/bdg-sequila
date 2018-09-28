@@ -88,7 +88,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
       .mkString("/")
 
     setLocalConf(spark.sqlContext)
-    lazy val alignments = readBAMFile(spark.sqlContext,samplePath)
+    lazy val alignments = readBAMFile(spark.sqlContext, samplePath)
 
     val filterFlag = spark.sqlContext.getConf(BDGInternalParams.filterReadsByFlag, "1796").toInt
 
@@ -189,18 +189,20 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
     }
 
 
+
     lazy val cov =
       if(maybeWindowLength != None) //fixed-length window
         CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos,maybeWindowLength,None)
-          .keyBy(_.key)
-          .reduceByKey((a,b) =>
-            CovRecordWindow(a.contigName,
-              a.start,
-              a.end,
-              (a.asInstanceOf[CovRecordWindow].overLap.get * a.asInstanceOf[CovRecordWindow].cov + b.asInstanceOf[CovRecordWindow].overLap.get * b.asInstanceOf[CovRecordWindow].cov )/
-                (a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get),
-              Some(a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get) ) )
-          .map(_._2)
+
+//          .keyBy(_.key)
+//          .reduceByKey((a,b) =>
+//            CovRecordWindow(a.contigName,
+//              a.start,
+//              a.end,
+//              (a.asInstanceOf[CovRecordWindow].overLap.get * a.asInstanceOf[CovRecordWindow].cov + b.asInstanceOf[CovRecordWindow].overLap.get * b.asInstanceOf[CovRecordWindow].cov )/
+//                (a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get),
+//              Some(a.asInstanceOf[CovRecordWindow].overLap.get + b.asInstanceOf[CovRecordWindow].overLap.get) ) )
+//          .map(_._2)
 
        else
         CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos,None, None)
