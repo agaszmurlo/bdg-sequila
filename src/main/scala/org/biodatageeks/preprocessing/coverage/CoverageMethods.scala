@@ -250,6 +250,7 @@ object CoverageMethodsMos {
           result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum/lastWindowLength.toFloat, Some (lastWindowLength))
 
           println(s"\nLast window: start ${result(ind).start}, end ${result(ind).end}, cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
+          ind+=1
         }
 
         result.take(ind).iterator
