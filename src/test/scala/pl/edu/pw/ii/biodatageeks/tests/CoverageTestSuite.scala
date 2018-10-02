@@ -22,6 +22,8 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     val tableNameMultiBAM = "readsMulti"
     val tableNameADAM = "readsADAM"
     val tableNameCRAM = "readsCRAM"
+    val splitSize = "1000000"
+
     before{
 
       Metrics.initialize(sc)
@@ -66,20 +68,31 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     }
 
 
+  /*
+
+      for InputSplitSize = 1000000 and table tableNameMultiBAM partition boundaries are as follows:
+      chr1 : 34
+      chrM : 7
+      chrM : 7882
+      chrM : 14402
+
+   */
+
   test("BAM - bdg_coverage - windows"){
 
-    spark.sqlContext.setConf(BDGInternalParams.InputSplitSize,"100000")
+    spark.sqlContext.setConf(BDGInternalParams.InputSplitSize, splitSize)
 
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
     val windowLength = 100
-    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878', '', '${windowLength}')")
+    println ("input parts " + session.sql(s"select * from ${tableNameMultiBAM}").rdd.partitions.length)
+    val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', '', '${windowLength}')")
+    println("bdg parts " + bdg.rdd.partitions.length)
     //bdg.show(5)
 
-    //bdg.where("start >= 3100 AND start <= 3300").show()
-
-    //bdg.show(305)
+    bdg.where("start >= 3100 AND start <= 3300").show()
+//
     //session.sql(s"select max(start),max(`end`) from ${tableNameBAM}").show()
 //    +----------+--------+
 //    |max(start)|max(end)|
@@ -88,59 +101,93 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
 //      +----------+--------+
 
 
-    assert (bdg.count == 301) //check that we removing that block:
-
-//    |      chr1|30000|30099|1.390625|
-//      +----------+-----+-----+--------+
-    assert (bdg.first().getInt(1) % windowLength == 0)
-    assert (bdg.first().getInt(2) % windowLength == windowLength - 1)
-    assert(bdg.where("start == 23500").first().getFloat(3)==0.52.toFloat)
-    assert(bdg.where("start == 2700").first().getFloat(3)==4.65.toFloat)
-    assert(bdg.where("start == 25100").first().getFloat(3)==0.0.toFloat)
-    assert(bdg.where("start == 3200").first().getFloat(3)== 166.79.toFloat)
+    assert (bdg.count == 267) //check that we removing that block:
+//
+////    |      chr1|30000|30099|1.390625|
+////      +----------+-----+-----+--------+
+//
+    assert (bdg.first().getInt(1) % windowLength == 0) // check for fixed window start position
+    assert (bdg.first().getInt(2) % windowLength == windowLength - 1) // // check for fixed window end position
+    assert(bdg.where("contigName == 'chr1' and start == 2700").first().getFloat(3)==4.65.toFloat)
+    assert(bdg.where("contigName == 'chr1' and start == 3200").first().getFloat(3)== 166.79.toFloat)
+    assert(bdg.where("contigName == 'chr1' and start == 10000").first().getFloat(3)== 1.5522388.toFloat) //value check [partition boundary]
+    assert(bdg.where("contigName == 'chrM' and start == 7800").first().getFloat(3)== 253.03.toFloat) //value check [partition boundary]
+    assert(bdg.where("contigName == 'chrM' and start == 14400").first().getFloat(3)== 134.7.toFloat) //value check [partition boundary]
+    assert(bdg.groupBy("contigName", "start").count().where("count != 1").count == 0) // no duplicates check
   }
 
   test("BAM - bdg_coverage - blocks - allPositions"){
+    spark.sqlContext.setConf(BDGInternalParams.InputSplitSize, splitSize)
+
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
     session.experimental.extraStrategies = new CoverageStrategy(session) :: Nil
 
-
     session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"true")
+
+    println ("input parts " + session.sql(s"select * from ${tableNameMultiBAM}").rdd.partitions.length)
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blocks')")
-    bdg.show(5)
+    println ("bdg parts " + bdg.rdd.partitions.length)
 
     assert(bdg.count() == 12865)
-    assert(bdg.first().get(1) == 1) // first position should be one
-    assert(bdg.where("start == 257").first().getShort(3) == 2)
-
+    assert(bdg.first().get(1) == 1) // first position check (should start from 1 with ShowAllPositions = true)
+    assert(bdg.where("contigName='chr1' and start == 35").first().getShort(3) == 2) // value check
+    assert(bdg.where("contigName='chrM' and start == 7").first().getShort(3) == 1) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 7881").first().getShort(3) == 248) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 7882").first().getShort(3) == 247) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 7883").first().getShort(3) == 246) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 14402").first().getShort(3) == 182) // value check [partition boundary]
+    assert(bdg.groupBy("contigName").max("end").where("contigName == 'chr1'").first().get(1) == 247249719) // max value check
+    assert(bdg.groupBy("contigName").max("end").where("contigName == 'chrM'").first().get(1) == 16571) // max value check
+    assert(bdg.groupBy("contigName", "start").count().where("count != 1").count == 0) // no duplicates check
   }
 
   test("BAM - bdg_coverage - blocks notAllPositions"){
+    spark.sqlContext.setConf(BDGInternalParams.InputSplitSize, splitSize)
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
     session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
+
     val bdg = session.sql(s"SELECT *  FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blocks')")
-    bdg.show(5)
 
-    assert(bdg.count() == 12861)
-    assert(bdg.first().get(1) != 1) // first position should not be one
-    assert(bdg.where("start == 35").first().getShort(3) == 2)
 
+    assert(bdg.count() == 12861) // total count check
+    assert(bdg.first().get(1) != 1) // first position check (should not start from 1 with ShowAllPositions = false)
+    assert(bdg.where("contigName='chr1' and start == 35").first().getShort(3) == 2) // value check
+    assert(bdg.where("contigName='chrM' and start == 7").first().getShort(3) == 1) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 7881").first().getShort(3) == 248) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 7882").first().getShort(3) == 247) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 7883").first().getShort(3) == 246) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 14402").first().getShort(3) == 182) // value check [partition boundary]
+    assert(bdg.groupBy("contigName").max("end").where("contigName == 'chr1'").first().get(1) == 10066) // max value check
+    assert(bdg.groupBy("contigName").max("end").where("contigName == 'chrM'").first().get(1) == 16571) // max value check
+    assert(bdg.groupBy("contigName", "start").count().where("count != 1").count == 0) // no duplicates check
   }
 
   test("BAM - bdg_coverage - bases - notAllPositions"){
+    spark.sqlContext.setConf(BDGInternalParams.InputSplitSize, splitSize)
     val session: SparkSession = SequilaSession(spark)
     SequilaRegister.register(session)
 
     session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
+    println ("input parts " + session.sql(s"select * from ${tableNameMultiBAM}").rdd.partitions.length)
     val bdg = session.sql(s"SELECT contigName, start, end, coverage FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'bases')")
-    bdg.show(5)
+    println ("bdg parts " + bdg.rdd.partitions.length)
 
-    assert(bdg.count() == 26598)
-    assert(bdg.first().get(1) != 1) // first position should not be one
-    assert(bdg.where("start == 88").first().getShort(3) == 7)
+    assert(bdg.count() == 26598) // total count check
+    assert(bdg.first().get(1) != 1) // first position check (should not start from 1 with ShowAllPositions = false)
+    assert(bdg.where("contigName='chr1' and start == 35").first().getShort(3) == 2) // value check
+    assert(bdg.where("contigName='chr1' and start == 88").first().getShort(3) == 7)
+    assert(bdg.where("contigName='chrM' and start == 7").first().getShort(3) == 1) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 7881").first().getShort(3) == 248) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 7882").first().getShort(3) == 247) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 7883").first().getShort(3) == 246) // value check [partition boundary]
+    assert(bdg.where("contigName='chrM' and start == 14402").first().getShort(3) == 182) // value check [partition boundary]
+    assert(bdg.groupBy("contigName").max("end").where("contigName == 'chr1'").first().get(1) == 10066) // max value check
+    assert(bdg.groupBy("contigName").max("end").where("contigName == 'chrM'").first().get(1) == 16571) // max value check
+    assert(bdg.groupBy("contigName", "start").count().where("count != 1").count == 0) // no duplicates check
+
   }
 
   test("CRAM - bdg_coverage - show"){
@@ -163,29 +210,11 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
 
     }
 
-
-    test("Repartitioning"){
-      spark.sqlContext.setConf(BDGInternalParams.InputSplitSize,"100000")
-      val  ss = SequilaSession(spark)
-      SequilaRegister.register(ss)
-
-
-      val a = ss.sql(
-        s"""
-          |SELECT * FROM ${tableNameBAM}
-        """.stripMargin)
-      println(s"""Partitions number: ${a
-        .rdd
-        .partitions.length}""" )
-
-    }
-
   after{
 
     Metrics.print(writer, Some(metricsListener.metrics.sparkMetrics.stageTimes))
     writer.flush()
     Metrics.stopRecording()
-    //writer.
 
   }
 

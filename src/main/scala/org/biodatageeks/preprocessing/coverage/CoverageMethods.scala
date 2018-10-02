@@ -183,6 +183,9 @@ object CoverageMethodsMos {
         // preallocate maximum size of result, assuming first and last blocks are added in perbase manner
         //IDEA: consider counting size within if-else statements
 
+
+        //println("chr " + contig + " position shift " + posShift)
+
         val result = new Array[AbstractCovRecord](firstBlockMaxLength + covArrayLength + lastBlockMaxLength)
 
         logger.info (s"size: ${firstBlockMaxLength + covArrayLength + lastBlockMaxLength}")
@@ -224,10 +227,9 @@ object CoverageMethodsMos {
               val winLen = windowLength.get
               val windowStart = ( ( (i+posShift) / winLen) - 1) * winLen //CHECK
               val windowEnd = windowStart + winLen - 1
-              if(windowStart == 3200)
-                println(s"Writing CovRecordWindow. start: $windowStart end $windowEnd  avg ${covSum/length.toFloat}, overlap ${Some (length)} [i:$i, posShift: ${posShift}")
-
               result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum/length.toFloat, Some (length))
+              if (contig == "chrM" && (windowStart == 7800 || windowStart == 14400))
+                println(s"\nFirst window: contig ${result(ind).contigName}, start ${result(ind).start}, end ${result(ind).end}, cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
               covSum = 0
               ind += 1
             }
@@ -241,15 +243,15 @@ object CoverageMethodsMos {
 
         if (windowLength !=None && i%windowLength.get != 0) { // add last window
           val winLen = windowLength.get
- //         val windowStart = ( ( (i+posShift) / winLen) - 1) * windowLength.get
+//          val windowStart = ( ( (i+posShift) / winLen) - 1) * windowLength.get
  //          val lastWindowLength = i%winLen
           val windowStart =  ( (i+posShift) / winLen)  * windowLength.get
           val windowEnd = windowStart + winLen - 1
-          val lastWindowLength = (i + posShift - 1) % winLen
+          val lastWindowLength = (i + posShift) % winLen // (i + posShift -1) % winLen
 
           result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum/lastWindowLength.toFloat, Some (lastWindowLength))
 
-          println(s"\nLast window: start ${result(ind).start}, end ${result(ind).end}, cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
+          println(s"\nLast window: contig ${result(ind).contigName}, start ${result(ind).start}, end ${result(ind).end}, cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
           ind+=1
         }
 
