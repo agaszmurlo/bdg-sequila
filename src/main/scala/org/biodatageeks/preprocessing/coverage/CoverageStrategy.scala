@@ -133,6 +133,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
           if (!minmax.contains(contig))
             minmax += contig -> (Int.MaxValue, 0)
 
+
           val upd = updateArray
             .filter(f => (f.contigName == c.contigName && f.startPoint + f.cov.length > c.minPos) && f.minPos < c.minPos)
             .headOption //should be always 1 or 0 elements
@@ -142,6 +143,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
           .sum
           upd match {
             case Some(u) => {
+
               val overlapLength = (u.startPoint + u.cov.length) - c.minPos + 1
               shrinkMap += (u.contigName, u.minPos) -> (c.minPos - u.minPos + 1)
               updateMap += (c.contigName, c.minPos) -> (Some(u.cov.takeRight(overlapLength)), (cumSum - u.cov.takeRight(overlapLength).sum).toShort)
@@ -206,9 +208,6 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
 
        else
         CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos,None, None)
-
-
-//    cov.take(10).foreach (p=> println(p.contigName + " " + p.start + " " + p.end + " " + p.asInstanceOf[CovRecordWindow].cov))
 
     if(maybeWindowLength != None) {   // windows
 

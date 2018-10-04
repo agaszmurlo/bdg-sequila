@@ -184,11 +184,12 @@ object CoverageMethodsMos {
         //IDEA: consider counting size within if-else statements
 
 
-        //println("chr " + contig + " position shift " + posShift)
+
 
         val result = new Array[AbstractCovRecord](firstBlockMaxLength + covArrayLength + lastBlockMaxLength)
 
-        logger.info (s"size: ${firstBlockMaxLength + covArrayLength + lastBlockMaxLength}")
+        logger.debug (s"$contig shift $posShift")
+        logger.debug (s"size: ${firstBlockMaxLength + covArrayLength + lastBlockMaxLength}")
 
         var i = 0
         var prevCov = 0
@@ -199,16 +200,16 @@ object CoverageMethodsMos {
           ind = addFirstBlock(contig, contigMinMap(contig)._1, posShift, blocksResult, allPos, ind, result)  // add first block if necessary (if current positionshift is equal to the earliest read in the contig)
 
 
-        while(i < covArrayLength){
+        while (i < covArrayLength) {
           cov += r._2._1(i)
 
           if (!blocksResult && windowLength == None) {
-            if (i!= covArrayLength - 1) { //HACK. otherwise we get doubled CovRecords for partition boundary index
-              result(ind) = CovRecord(contig, i + posShift, i + posShift,cov.toShort)
+            if (i != covArrayLength - 1) { //HACK. otherwise we get doubled CovRecords for partition boundary index
+              result(ind) = CovRecord(contig, i + posShift, i + posShift, cov.toShort)
               ind += 1
             }
           }
-          else if(windowLength == None) {
+          else if (windowLength == None) {
             if (prevCov >= 0 && prevCov != cov && i > 0) { // for the first element we do not write block
               result(ind) = CovRecord(contig, i + posShift - blockLength, i + posShift - 1, prevCov.toShort)
               blockLength = 0
@@ -225,33 +226,57 @@ object CoverageMethodsMos {
                 else windowLength.get
 
               val winLen = windowLength.get
-              val windowStart = ( ( (i+posShift) / winLen) - 1) * winLen //CHECK
+              val windowStart = (((i + posShift) / winLen) - 1) * winLen //CHECK
               val windowEnd = windowStart + winLen - 1
-              result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum/length.toFloat, Some (length))
-              if (contig == "chrM" && (windowStart == 7800 || windowStart == 14400))
-                println(s"\nFirst window: contig ${result(ind).contigName}, start ${result(ind).start}, end ${result(ind).end}, cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
+              result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum / length.toFloat, Some(length))
+              if (logger.isDebugEnabled) {
+                if (contig == "chrM" && windowStart == 7800) {
+                  println(s"\nFirst window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} [i:$i, posShift: ${posShift}, start: ${result(ind).start} end: ${result(ind).start + length - 1} covSum: $covSum, length: $length] ")
+                  println(s"\nFirst window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
+                }
+                if (contig == "chr1" && windowStart == 10000) {
+                  println(s"\nFirst window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} [i:$i, posShift: ${posShift}, start: ${result(ind).start} end: ${result(ind).start + length - 1} covSum: $covSum, length: $length] ")
+                  println(s"\nFirst window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
+                }
+              }
               covSum = 0
               ind += 1
             }
             covSum += cov
-             }
-          i+= 1
+          }
+          if (logger.isDebugEnabled) {
+            if (contig == "chrM" && (i + posShift >= 7880 && i + posShift <= 7883))
+              println(s"$posShift ${i + posShift} $cov")
+            if (contig == "chr1" && i + posShift >= 10064)
+              println(s"$posShift ${i + posShift} $cov")
+          }
+          i += 1
+
         }
 
         if (windowLength == None)
           ind = addLastBlock (contig, contigMinMap(contig)._2, r._2._4, maxPosition, blocksResult, allPos, ind, result)
 
         if (windowLength !=None && i%windowLength.get != 0) { // add last window
+
           val winLen = windowLength.get
-//          val windowStart = ( ( (i+posShift) / winLen) - 1) * windowLength.get
- //          val lastWindowLength = i%winLen
           val windowStart =  ( (i+posShift) / winLen)  * windowLength.get
           val windowEnd = windowStart + winLen - 1
-          val lastWindowLength = (i + posShift) % winLen // (i + posShift -1) % winLen
+//          val lastWindowLength = (i + posShift) % winLen  // (i + posShift -1) % winLen // -1 current
+          val lastWindowLength = (i + posShift) % winLen - 1 // HACK to fix last window (omit last element)
+          covSum -= cov   // HACK to fix last window (substract last element)
 
           result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum/lastWindowLength.toFloat, Some (lastWindowLength))
-
-          println(s"\nLast window: contig ${result(ind).contigName}, start ${result(ind).start}, end ${result(ind).end}, cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
+          if(logger.isDebugEnabled) {
+            if (contig == "chrM" && windowStart == 7800) {
+              println(s"\nLast window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} [i:$i, posShift: ${posShift}, start: ${result(ind).start} end: ${result(ind).start + lastWindowLength - 1} covSum: $covSum, length: $lastWindowLength] ")
+              println(s"Last window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ] ")
+            }
+            if (contig == "chr1" && windowStart == 10000) {
+              println(s"\nLast window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} [i:$i, posShift: ${posShift}, start: ${result(ind).start} end: ${result(ind).start + lastWindowLength - 1} covSum: $covSum, length: $lastWindowLength] ")
+              println(s"Last window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ] ")
+            }
+          }
           ind+=1
         }
 
@@ -266,15 +291,17 @@ object CoverageMethodsMos {
      c => {
        val upd = b.value.upd
        val shrink = b.value.shrink
+        // val(q,w,e,r,t,y) = c // to REFACTOR
 
-       val updArray = upd.get( (c._1,c._2._2) ) match {
-         case Some(a) => {
+       val updArray = upd.get( (c._1,c._2._2) ) match { // check if there is a value for contigName and minPos in upd, returning array of coverage and cumSum to update current contigRange
+         case Some(a) => { // array of covs and cumSum
            a._1 match {
              case Some(b) => {
                var i = 0
+               c._2._1(i) = (c._2._1(i) + a._2).toShort // add cumSum to zeroth element
+
                while (i < b.length) {
                  c._2._1(i) = (c._2._1(i) + b(i)).toShort
-                 if (i == 0) c._2._1(0) = (c._2._1(0) + a._2).toShort
                  i += 1
                }
                c._2._1

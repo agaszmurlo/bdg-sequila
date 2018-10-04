@@ -86,32 +86,15 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     SequilaRegister.register(session)
 
     val windowLength = 100
-    println ("input parts " + session.sql(s"select * from ${tableNameMultiBAM}").rdd.partitions.length)
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', '', '${windowLength}')")
-    println("bdg parts " + bdg.rdd.partitions.length)
-    //bdg.show(5)
 
-    bdg.where("start >= 3100 AND start <= 3300").show()
-//
-    //session.sql(s"select max(start),max(`end`) from ${tableNameBAM}").show()
-//    +----------+--------+
-//    |max(start)|max(end)|
-//      +----------+--------+
-//    |     29988|   30063|
-//      +----------+--------+
-
-
-    assert (bdg.count == 267) //check that we removing that block:
-//
-////    |      chr1|30000|30099|1.390625|
-////      +----------+-----+-----+--------+
-//
+    assert (bdg.count == 267)
     assert (bdg.first().getInt(1) % windowLength == 0) // check for fixed window start position
     assert (bdg.first().getInt(2) % windowLength == windowLength - 1) // // check for fixed window end position
     assert(bdg.where("contigName == 'chr1' and start == 2700").first().getFloat(3)==4.65.toFloat)
     assert(bdg.where("contigName == 'chr1' and start == 3200").first().getFloat(3)== 166.79.toFloat)
     assert(bdg.where("contigName == 'chr1' and start == 10000").first().getFloat(3)== 1.5522388.toFloat) //value check [partition boundary]
-    assert(bdg.where("contigName == 'chrM' and start == 7800").first().getFloat(3)== 253.03.toFloat) //value check [partition boundary]
+    assert(bdg.where("contigName == 'chrM' and start == 7800").first().getFloat(3)== 253.03001.toFloat) //value check [partition boundary]
     assert(bdg.where("contigName == 'chrM' and start == 14400").first().getFloat(3)== 134.7.toFloat) //value check [partition boundary]
     assert(bdg.groupBy("contigName", "start").count().where("count != 1").count == 0) // no duplicates check
   }
@@ -125,9 +108,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
 
     session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"true")
 
-    println ("input parts " + session.sql(s"select * from ${tableNameMultiBAM}").rdd.partitions.length)
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blocks')")
-    println ("bdg parts " + bdg.rdd.partitions.length)
 
     assert(bdg.count() == 12865)
     assert(bdg.first().get(1) == 1) // first position check (should start from 1 with ShowAllPositions = true)
@@ -151,7 +132,6 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
 
     val bdg = session.sql(s"SELECT *  FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blocks')")
 
-
     assert(bdg.count() == 12861) // total count check
     assert(bdg.first().get(1) != 1) // first position check (should not start from 1 with ShowAllPositions = false)
     assert(bdg.where("contigName='chr1' and start == 35").first().getShort(3) == 2) // value check
@@ -171,11 +151,11 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     SequilaRegister.register(session)
 
     session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
-    println ("input parts " + session.sql(s"select * from ${tableNameMultiBAM}").rdd.partitions.length)
     val bdg = session.sql(s"SELECT contigName, start, end, coverage FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'bases')")
-    println ("bdg parts " + bdg.rdd.partitions.length)
 
-    assert(bdg.count() == 26598) // total count check
+    bdg.where("contigName =='chrM' and start >= 7880 and start <= 7885").show()
+
+    assert(bdg.count() == 26598) // total count check // was 26598
     assert(bdg.first().get(1) != 1) // first position check (should not start from 1 with ShowAllPositions = false)
     assert(bdg.where("contigName='chr1' and start == 35").first().getShort(3) == 2) // value check
     assert(bdg.where("contigName='chr1' and start == 88").first().getShort(3) == 7)
@@ -195,7 +175,6 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
     SequilaRegister.register(session)
 
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameCRAM}','test', 'blocks') ")
-    bdg.show(5)
 
     assert(bdg.count() == 49)
     assert(bdg.where("start == 107").first().getShort(3) == 459)
