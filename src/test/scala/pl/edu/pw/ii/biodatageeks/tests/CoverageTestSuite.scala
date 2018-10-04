@@ -87,7 +87,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
 
     val windowLength = 100
     val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', '', '${windowLength}')")
-
+    
     assert (bdg.count == 267)
     assert (bdg.first().getInt(1) % windowLength == 0) // check for fixed window start position
     assert (bdg.first().getInt(2) % windowLength == windowLength - 1) // // check for fixed window end position
@@ -152,8 +152,6 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
 
     session.sqlContext.setConf(BDGInternalParams.ShowAllPositions,"false")
     val bdg = session.sql(s"SELECT contigName, start, end, coverage FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'bases')")
-
-    bdg.where("contigName =='chrM' and start >= 7880 and start <= 7885").show()
 
     assert(bdg.count() == 26598) // total count check // was 26598
     assert(bdg.first().get(1) != 1) // first position check (should not start from 1 with ShowAllPositions = false)
