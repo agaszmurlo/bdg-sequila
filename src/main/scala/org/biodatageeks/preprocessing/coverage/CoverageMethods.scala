@@ -164,6 +164,23 @@ object CoverageMethodsMos {
   }
 
 
+  @inline def addLastWindow(contig: String, windowLength: Option[Int], posShift: Int, i: Int, covSum: Int, cov: Int, ind: Int, result: Array[AbstractCovRecord]) = {
+    var indexShift = ind
+    var sum = covSum
+    if (i%windowLength.get != 0) { // add last window
+      val winLen = windowLength.get
+      val windowStart =  ( (i+posShift) / winLen)  * windowLength.get
+      val windowEnd = windowStart + winLen - 1
+      //          val lastWindowLength = (i + posShift) % winLen  // (i + posShift -1) % winLen // -1 current
+      val lastWindowLength = (i + posShift) % winLen - 1 // HACK to fix last window (omit last element)
+      sum -= cov   // HACK to fix last window (substract last element)
+
+      result(ind) = CovRecordWindow(contig, windowStart, windowEnd, sum/lastWindowLength.toFloat, Some (lastWindowLength))
+      indexShift+=1
+    }
+    indexShift
+  }
+
   def eventsToCoverage(sampleId:String, events: RDD[(String,(Array[Short],Int,Int,Int))],
                        contigMinMap: mutable.HashMap [String,(Int,Int)],
                        blocksResult:Boolean, allPos: Boolean, windowLength: Option[Int], targetsTable:Option[String]) : RDD[AbstractCovRecord] = {
@@ -183,9 +200,6 @@ object CoverageMethodsMos {
         // preallocate maximum size of result, assuming first and last blocks are added in perbase manner
         //IDEA: consider counting size within if-else statements
 
-
-
-
         val result = new Array[AbstractCovRecord](firstBlockMaxLength + covArrayLength + lastBlockMaxLength)
 
         logger.debug (s"$contig shift $posShift")
@@ -196,133 +210,101 @@ object CoverageMethodsMos {
         var blockLength = 0
 
 
-        if (windowLength == None)
+        if (windowLength.isEmpty) { // BLOCKS & BASES (NON-WINDOW) COVERAGE CALCULATIONS
           ind = addFirstBlock(contig, contigMinMap(contig)._1, posShift, blocksResult, allPos, ind, result)  // add first block if necessary (if current positionshift is equal to the earliest read in the contig)
 
+          while (i < covArrayLength) {
+            cov += r._2._1(i)
 
-        while (i < covArrayLength) {
-          cov += r._2._1(i)
-
-          if (!blocksResult && windowLength == None) {
-            if (i != covArrayLength - 1) { //HACK. otherwise we get doubled CovRecords for partition boundary index
-              result(ind) = CovRecord(contig, i + posShift, i + posShift, cov.toShort)
-              ind += 1
-            }
-          }
-          else if (windowLength == None) {
-            if (prevCov >= 0 && prevCov != cov && i > 0) { // for the first element we do not write block
-              result(ind) = CovRecord(contig, i + posShift - blockLength, i + posShift - 1, prevCov.toShort)
-              blockLength = 0
-              ind += 1
-            }
-            blockLength += 1
-            prevCov = cov
-          }
-          else if (windowLength != None) {
-
-            if ((i + posShift) % windowLength.get == 0 && (i + posShift) > 0) {
-              val length =
-                if (i < windowLength.get) i
-                else windowLength.get
-
-              val winLen = windowLength.get
-              val windowStart = (((i + posShift) / winLen) - 1) * winLen //CHECK
-              val windowEnd = windowStart + winLen - 1
-              result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum / length.toFloat, Some(length))
-              if (logger.isDebugEnabled) {
-                if (contig == "chrM" && windowStart == 7800) {
-                  println(s"\nFirst window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} [i:$i, posShift: ${posShift}, start: ${result(ind).start} end: ${result(ind).start + length - 1} covSum: $covSum, length: $length] ")
-                  println(s"\nFirst window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
-                }
-                if (contig == "chr1" && windowStart == 10000) {
-                  println(s"\nFirst window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} [i:$i, posShift: ${posShift}, start: ${result(ind).start} end: ${result(ind).start + length - 1} covSum: $covSum, length: $length] ")
-                  println(s"\nFirst window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ind: $ind] ")
-                }
+            if (!blocksResult) {                  // per-base output
+              if (i != covArrayLength - 1) { //HACK. otherwise we get doubled CovRecords for partition boundary index
+                result(ind) = CovRecord(contig, i + posShift, i + posShift, cov.toShort)
+                ind += 1
               }
-              covSum = 0
-              ind += 1
+            } else {                              // blocks output
+              if (prevCov >= 0 && prevCov != cov && i > 0) { // for the first element we do not write block
+                result(ind) = CovRecord(contig, i + posShift - blockLength, i + posShift - 1, prevCov.toShort)
+                blockLength = 0
+                ind += 1
+              }
+              blockLength += 1
+              prevCov = cov
             }
-            covSum += cov
+            i += 1
           }
-          if (logger.isDebugEnabled) {
-            if (contig == "chrM" && (i + posShift >= 7880 && i + posShift <= 7883))
-              println(s"$posShift ${i + posShift} $cov")
-            if (contig == "chr1" && i + posShift >= 10064)
-              println(s"$posShift ${i + posShift} $cov")
-          }
-          i += 1
 
-        }
-
-        if (windowLength == None)
           ind = addLastBlock (contig, contigMinMap(contig)._2, r._2._4, maxPosition, blocksResult, allPos, ind, result)
 
-        if (windowLength !=None && i%windowLength.get != 0) { // add last window
+          result.take(ind).iterator
 
-          val winLen = windowLength.get
-          val windowStart =  ( (i+posShift) / winLen)  * windowLength.get
-          val windowEnd = windowStart + winLen - 1
-//          val lastWindowLength = (i + posShift) % winLen  // (i + posShift -1) % winLen // -1 current
-          val lastWindowLength = (i + posShift) % winLen - 1 // HACK to fix last window (omit last element)
-          covSum -= cov   // HACK to fix last window (substract last element)
+        } else {          // FIXED - WINDOW COVERAGE CALCULATIONS
+          while (i < covArrayLength) {
+            cov += r._2._1(i)
 
-          result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum/lastWindowLength.toFloat, Some (lastWindowLength))
-          if(logger.isDebugEnabled) {
-            if (contig == "chrM" && windowStart == 7800) {
-              println(s"\nLast window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} [i:$i, posShift: ${posShift}, start: ${result(ind).start} end: ${result(ind).start + lastWindowLength - 1} covSum: $covSum, length: $lastWindowLength] ")
-              println(s"Last window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ] ")
-            }
-            if (contig == "chr1" && windowStart == 10000) {
-              println(s"\nLast window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} [i:$i, posShift: ${posShift}, start: ${result(ind).start} end: ${result(ind).start + lastWindowLength - 1} covSum: $covSum, length: $lastWindowLength] ")
-              println(s"Last window: ${result(ind).contigName}: ${result(ind).start} - ${result(ind).end} cov: ${result(ind).asInstanceOf[CovRecordWindow].cov} overlap ${result(ind).asInstanceOf[CovRecordWindow].overLap} [i:$i, posShift: ${posShift} ] ")
-            }
+            if ((i + posShift) % windowLength.get == 0 && (i + posShift) > 0) {
+                val length =
+                  if (i < windowLength.get) i
+                  else windowLength.get
+
+                val winLen = windowLength.get
+                val windowStart = (((i + posShift) / winLen) - 1) * winLen
+                val windowEnd = windowStart + winLen - 1
+                result(ind) = CovRecordWindow(contig, windowStart, windowEnd, covSum / length.toFloat, Some(length))
+                covSum = 0
+                ind += 1
+              }
+
+            covSum += cov
+            i += 1
+
           }
-          ind+=1
+          ind = addLastWindow(contig, windowLength, posShift, i, covSum, cov, ind, result)
+
+          result.take(ind).iterator
         }
 
-        result.take(ind).iterator
       })
       }.flatMap(r=>r)
   }
 
-  //contigName,covArray,minPos,maxPos,contigLenth,maxCigarLength
+
   def upateContigRange(b:Broadcast[UpdateStruct],covEvents: RDD[(String,(Array[Short],Int,Int,Int,Int))]) = {
    covEvents.map{
      c => {
        val upd = b.value.upd
        val shrink = b.value.shrink
-        // val(q,w,e,r,t,y) = c // to REFACTOR
+       val(contig,(eventsArray,minPos,maxPos,contigLength,maxCigarLength)) = c // to REFACTOR
 
-       val updArray = upd.get( (c._1,c._2._2) ) match { // check if there is a value for contigName and minPos in upd, returning array of coverage and cumSum to update current contigRange
-         case Some(a) => { // array of covs and cumSum
-           a._1 match {
-             case Some(b) => {
+       val updArray = upd.get( (contig,minPos) ) match { // check if there is a value for contigName and minPos in upd, returning array of coverage and cumSum to update current contigRange
+         case Some((arr,covSum)) => { // array of covs and cumSum
+           arr match {
+             case Some(overlapArray) => {
                var i = 0
-               c._2._1(i) = (c._2._1(i) + a._2).toShort // add cumSum to zeroth element
+               eventsArray(i) = (eventsArray(i) + covSum).toShort // add cumSum to zeroth element
 
-               while (i < b.length) {
-                 c._2._1(i) = (c._2._1(i) + b(i)).toShort
+               while (i < overlapArray.length) {
+                 eventsArray(i) = (eventsArray(i) + overlapArray(i)).toShort
                  i += 1
                }
-               c._2._1
+               eventsArray
              }
              case None => {
-               c._2._1(0) = (c._2._1(0) + a._2).toShort
-               c._2._1
+               eventsArray(0) = (eventsArray(0) + covSum).toShort
+               eventsArray
              }
            }
          }
            case None =>{
-             c._2._1
+             eventsArray
            }
        }
-       val shrinkArray = shrink.get( (c._1, c._2._2) ) match {
+       val shrinkArray = shrink.get( (contig, minPos) ) match {
          case Some(len) => {
             updArray.take(len)
          }
          case None => updArray
        }
-       (c._1, (shrinkArray,c._2._2,c._2._3,c._2._4) )
+       (contig, (shrinkArray, minPos, maxPos, contigLength) )
      }
    }
   }
