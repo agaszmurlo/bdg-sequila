@@ -49,7 +49,7 @@ object DepthOfCoverage {
     val readsTable = spark.sqlContext.createDataFrame(alignments)
     readsTable.createOrReplaceTempView("reads")
 
-    val querySample="select distinct(sample) from reads"
+    val querySample="select distinct(sampleId) from reads"
     val sample = spark.sql(querySample).first()
 
 
