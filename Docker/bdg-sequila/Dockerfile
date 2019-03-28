@@ -19,7 +19,6 @@ ARG BDG_VERSION
 ENV BDG_VERSION=$BDG_VERSION
 
 
-
 RUN apt-get update && apt-get install --yes git sudo curl libssl-dev libxml2-dev
 
 
@@ -43,10 +42,14 @@ COPY bin/bdg-sequilaR.sh /tmp/bdg-toolset/bdg-sequilaR
 
 #featureCounts scripts
 COPY bin/featureCounts.sh /tmp/bdg-toolset/featureCounts
+RUN echo $BDG_VERSION
 RUN bash -c " if [[ $BDG_VERSION =~ SNAPSHOT ]]; then \
     wget https://zsibio.ii.pw.edu.pl/nexus/repository/maven-snapshots/org/biodatageeks/bdg-sequila_2.11/${BDG_VERSION}/bdg-sequila_2.11-${BDG_VERSION}-assembly.jar -O /tmp/bdg-toolset/bdg-sequila-assembly-${BDG_VERSION}.jar ; \
     else wget https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/org/biodatageeks/bdg-sequila_2.11/${BDG_VERSION}/bdg-sequila_2.11-${BDG_VERSION}-assembly.jar -O /tmp/bdg-toolset/bdg-sequila-assembly-${BDG_VERSION}.jar ; \
     fi"
+
+
+COPY bin/depthOfCoverage.sh /tmp/bdg-toolset/depthOfCoverage
 
 #copy test data
 COPY NA12878.slice.bam /tmp/NA12878.slice.bam
