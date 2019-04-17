@@ -1,4 +1,4 @@
-FROM biodatageeks/bdg-spark
+FROM biodatageeks/bdg-spark:2.4.1
 MAINTAINER biodatageeks <team@biodatageeks.ii.pw.edu.pl>
 
 RUN apt-get update && apt-get install --yes git sudo curl
