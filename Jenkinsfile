@@ -79,7 +79,7 @@ def notifySlack = {
 
     attachments.add(attachment);
 
-  slackSend(bot:true, channel: channel, attachments: attachments.toString())
+  slackSend(bot:false, channel: channel, attachments: attachments.toString())
 }
 
 
@@ -116,7 +116,7 @@ node {
 
                         echo "branch: ${env.BRANCH_NAME}"
                         echo 'Publishing to ZSI-BIO snapshots repository....'
-                        sh "SBT_OPTS='-XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=2G -Xmx2G' ${tool name: 'sbt-0.13.15', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt publish"
+                        sh "SBT_OPTS='-XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=2G -Xmx2G' ${tool name: 'sbt-0.13.15', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt 'set test in publish := {}' publish"
 
 
             }
