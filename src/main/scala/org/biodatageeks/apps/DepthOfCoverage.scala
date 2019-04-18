@@ -8,15 +8,22 @@ import org.rogach.scallop.ScallopConf
 import org.seqdoop.hadoop_bam.{BAMInputFormat, SAMRecordWritable}
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 
+import org.apache.spark.sql.SequilaSession
+import org.biodatageeks.utils.{SequilaRegister, UDFRegister,BDGInternalParams}
+
+
+
+
+
 object DepthOfCoverage {
 
-  case class Region(contigName:String,start:Int,end:Int)
+  case class Region(contigName:String, start:Int, end:Int)
 
   class RunConf(args:Array[String]) extends ScallopConf(args){
 
     val output = opt[String](required = true)
     val readsFile = trailArg[String](required = true)
-    val format = trailArg[String](required = true)
+    val format = opt[String](required = true)
     verify()
   }
 
@@ -28,10 +35,6 @@ object DepthOfCoverage {
       .appName("SeQuiLa-DoC")
       .getOrCreate()
 
-    //    spark.sqlContext.setConf("spark.biodatageeks.rangejoin.useJoinOrder","true")
-
-
-
 
     spark
       .sparkContext
@@ -41,22 +44,31 @@ object DepthOfCoverage {
       .sparkContext
       .hadoopConfiguration.set(SAMHeaderReader.VALIDATION_STRINGENCY_PROPERTY, ValidationStringency.SILENT.toString)
 
+
+    val sample = spark
+      .sparkContext.newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat](runConf.readsFile())
+      .map(_._2.get).first().getReadGroup().getSample
+
     val alignments = spark
       .sparkContext.newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat](runConf.readsFile())
       .map(_._2.get)
       .map(r => Region(r.getContig, r.getStart, r.getEnd))
+    val ss = SequilaSession(spark)
+    SequilaRegister.register(ss)
 
-    val readsTable = spark.sqlContext.createDataFrame(alignments)
+    val readsTable = ss.sqlContext.createDataFrame(alignments)
     readsTable.createOrReplaceTempView("reads")
 
-    val querySample="select distinct(sampleId) from reads"
-    val sample = spark.sql(querySample).first()
+
+    println(s">>>> Analyzed $sample")
 
 
-    val query = "SELECT * FROM bdg_coverage('reads_exome', '%s', '%s')".format(sample, runConf.format)
 
 
-    spark.sql(query)
+    val query = "SELECT * FROM bdg_coverage('reads', '%s', '%s')".format(sample, runConf.format)
+
+
+    ss.sql(query)
       .orderBy("chr")
       .coalesce(1)
       .write
