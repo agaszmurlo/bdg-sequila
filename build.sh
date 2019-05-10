@@ -36,6 +36,7 @@ do
   echo "Building image ${image}..."
   #diffTs=`echo "$(date +%s) - $(git log -n 1 --pretty=format:%at ${dir})" | bc`
   #if [ $diffTs -lt $MAX_COMMIT_TS_DIFF ]; then
+  if [ $image == "biodatageeks/bdg-sequila" ]; then
     cd $dir
      if [[ ${BUILD_MODE} != "local" ]]; then
          docker build --no-cache --build-arg BDG_VERSION=$version -t $image:$version .
@@ -57,6 +58,6 @@ do
     docker images $image | tail -n +5 | sed 's/ \{1,\}/:/g' | cut -f1,2 -d':' | grep -v "<none>"| xargs -i docker rmi {}
 
     cd ../..
-  #fi
+  fi
 
 done

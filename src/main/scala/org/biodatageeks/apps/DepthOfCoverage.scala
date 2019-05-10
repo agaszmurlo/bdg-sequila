@@ -22,7 +22,7 @@ object DepthOfCoverage {
   class RunConf(args:Array[String]) extends ScallopConf(args){
 
     val output = opt[String](required = true)
-    val readsFile = trailArg[String](required = true)
+    val reads = opt[String](required = true)
     val format = opt[String](required = true)
     verify()
   }
@@ -45,33 +45,22 @@ object DepthOfCoverage {
       .hadoopConfiguration.set(SAMHeaderReader.VALIDATION_STRINGENCY_PROPERTY, ValidationStringency.SILENT.toString)
 
 
-    val sample = spark
-      .sparkContext.newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat](runConf.readsFile())
-      .map(_._2.get).first().getReadGroup().getSample
-
-    val alignments = spark
-      .sparkContext.newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat](runConf.readsFile())
-      .map(_._2.get)
-      .map(r => Region(r.getContig, r.getStart, r.getEnd))
     val ss = SequilaSession(spark)
     SequilaRegister.register(ss)
 
-    val readsTable = ss.sqlContext.createDataFrame(alignments)
-    readsTable.createOrReplaceTempView("reads")
 
+    ss.sql(s"""CREATE TABLE IF NOT EXISTS reads  USING org.biodatageeks.datasources.BAM.BAMDataSource  OPTIONS(path '${runConf.reads()}')""")
 
-    println(s">>>> Analyzed $sample")
+    val sample = ss.sql(s"SELECT DISTINCT (sampleId) from reads").first()
 
-
-
-
-    val query = "SELECT * FROM bdg_coverage('reads', '%s', '%s')".format(sample, runConf.format)
+    val query = "SELECT * FROM bdg_coverage('reads', '%s', '%s')".format(sample, runConf.format())
 
 
     ss.sql(query)
-      .orderBy("chr")
+      .orderBy("contigName")
       .coalesce(1)
       .write
+        .mode("overwrite")
       .option("header", "true")
       .option("delimiter", "\t")
       .csv(runConf.output())

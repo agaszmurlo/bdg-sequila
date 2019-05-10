@@ -40,4 +40,4 @@ echo -e "\n"
 echo "Running with the following arguments: $appParams"
 echo "Arguments passed to Apache Spark: $sparkParams"
 echo -e "\n"
-spark-submit ${sparkParams} --class org.biodatageeks.apps.FeatureCounts /tmp/bdg-toolset/bdg-sequila-assembly-${BDG_VERSION}.jar  $appParams
+spark-submit -v ${sparkParams} --class org.biodatageeks.apps.FeatureCounts /tmp/bdg-toolset/bdg-sequila-assembly-${BDG_VERSION}.jar  $appParams
