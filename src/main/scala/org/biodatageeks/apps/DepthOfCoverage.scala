@@ -51,19 +51,25 @@ object DepthOfCoverage {
 
     ss.sql(s"""CREATE TABLE IF NOT EXISTS reads  USING org.biodatageeks.datasources.BAM.BAMDataSource  OPTIONS(path '${runConf.reads()}')""")
 
-    val sample = ss.sql(s"SELECT DISTINCT (sampleId) from reads").first()
+    val sample = ss.sql(s"SELECT DISTINCT (sampleId) from reads").first().get(0)
+    println(s"Input file: ${runConf.reads()}")
+    println(s"Format: ${runConf.format()}")
+    println(s"Sample: $sample")
+
 
     val query = "SELECT * FROM bdg_coverage('reads', '%s', '%s')".format(sample, runConf.format())
 
 
     ss.sql(query)
-      .orderBy("contigName")
+      .orderBy("contigName", "start")
       .coalesce(1)
       .write
         .mode("overwrite")
       .option("header", "true")
       .option("delimiter", "\t")
       .csv(runConf.output())
+
+    println(s"Coverage for $sample stored in ${runConf.output()}")
   }
 
 }
