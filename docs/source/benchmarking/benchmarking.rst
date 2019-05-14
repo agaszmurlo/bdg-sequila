@@ -549,9 +549,19 @@ cores   sequila(bases) sequila(blocks) samtools
 =====   ============== =============== ========
 
 
-CRAM versus BAM performance comparison for WES dataset
-------------------------------------------------------
+CRAM versus BAM performance comparison for WES dataset (blocks)
+---------------------------------------------------------------
 
+
+=====   ============== ============
+cores   sequila(CRAM)  sequila(BAM)
+=====   ============== ============
+1        26m 27s          6m 54s
+5        4m 35s           1m 47s
+10       2m 54s           1m 04s
+25       1m 44s           0m 28s
+50       1m 15s           0m 20s
+=====   ============== ============
 
 Discussion
 -----------
