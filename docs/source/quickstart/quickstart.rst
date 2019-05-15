@@ -1,23 +1,19 @@
 
 
 Quickstart 
-==========
+===========
 
 
-SeQuiLa is perfect for quick, ad-hoc analysis. Get ready for quickstart with SeQuiLa.
-
-First we will verify installation of SeQuiLa.
-
-Test run at local machine
-#########################
-
-Sequila is distributed as Docker image. It is available at DockerHub. 
+SeQuiLa is perfect for quick, ad-hoc analysis. Sequila is distributed as Docker image. It is available at DockerHub. 
 
 The quickest way to test sequila is to run test example on sample data which are already packaged in docker container.
 
 .. note::
 
    Prerequisities: You should have docker daemon installed and running. `<https://docs.docker.com/install/>`_
+
+Test run 
+##########
 
 
 In your command line pull docker image from Docker Hub and invoke smoketests
@@ -40,11 +36,7 @@ At the end you should see the following output:
 
 From the screenshot above you can see that our optimized IntervalTree-based join strategy was used. Some additional debug information were logged to the console.
 
-The final result should be as follows:
-::
-
-   TEST PASSED
-
+The final result should be as follows: ``TEST PASSED``
 
 Congratulations! Your installation is working on sample data.
 
@@ -54,14 +46,8 @@ Congratulations! Your installation is working on sample data.
 
 
 
-
-Ad-hoc analysis
-#################
-
-For ad-hoc analysis SeQuiLa provides two usage patterns:
-
-Using predefined scripts in docker container
-**********************************************
+Commandline scripts
+#####################
 
 In SeQuiLa's docker image are two predefined scripts written to be executable from commandline in good-old fashion.  No need of Scala and Spark is needed.
 
@@ -73,6 +59,12 @@ In SeQuiLa's docker image are two predefined scripts written to be executable fr
 Sample usage of SeQuiLa wrapped in docker container's scripts.
 The snippet below shows how to download sample data files into specific directory, then run the container with mounted volume.
 The result should appear in specified output directory.
+
+
+featureCounts
+***************
+
+Parameters passed to featureCounts are divided into two parts: equivalent to parameters passed for spark-submit (master, executor-memory, driver-memory etc.: `<https://spark.apache.org/docs/latest/submitting-applications.html>`_) and parameters passed to featureCounts itself (input files, output files, format).
 
 
 .. code-block:: bash
@@ -91,7 +83,35 @@ The result should appear in specified output directory.
       -o /data/featureOutput -F SAF \
       -a /data/tgp_exome_hg18.saf /data/NA12878.slice.bam
 
-Parameters passed to featureCounts are divided into two parts: equivalent to parameters passed for spark-submit (master, executor-memory, driver-memory etc.: `<https://spark.apache.org/docs/latest/submitting-applications.html>`_) and parameters passed to featureCounts itself (input files, output files, format).
+
+
+
+.. note::
+
+   If you are using zsh shell remember to put double-quotes (") when specifying master local with specified number threads. ``--master "local[4]"``
+
+
+depthOfCoverage
+*****************
+
+Parameters passed to depthOfCoverage are divided into two parts: equivalent to parameters passed for spark-submit (master, executor-memory, driver-memory etc.: `<https://spark.apache.org/docs/latest/submitting-applications.html>`_) and parameters passed to featureCounts itself (input reads file, output file, format).
+
+
+.. code-block:: bash
+
+   cd  /data/sequila
+
+   wget http://biodatageeks.org/sequila/data/NA12878.slice.bam
+
+   docker run --rm -it  \ 
+      -v /data/sequila:/data \ 
+      -e USERID=$UID -e GROUPID=$(id -g) \
+      biodatageeks/|project_name|:|version| \
+      depthOfCoverage -- \ 
+      --reads /data/NA12878.slice.bam --format blocks \
+      --output /data/NA12878.cov.bed
+
+
 
 
 .. note::
@@ -100,10 +120,13 @@ Parameters passed to featureCounts are divided into two parts: equivalent to par
 
 
 
-Launch bdg-shell
-#################
+Ad-hoc analyses in Scala
+##########################
 
-Here we will launch bdg-shell which is actually spark-shell wrapped by biodatageeks with some additional configuration.
+Analyses in bdg-shell
+**********************
+
+Here we will launch bdg-shell which is actually spark-shell wrapped with some additional configuration.
 So if you are familiar with Scala you will be able to use SeQuiLa right away.
 
 .. code-block:: bash
@@ -115,57 +138,6 @@ So if you are familiar with Scala you will be able to use SeQuiLa right away.
 
 And voila you should see bdg-shell collecting its depenedencies and starting off. Now you are ready to load your sample data and do some interval queries or coverage analyses on your own.
 
-Launch spark-shell
-###################
-
-If for any reason you do not want to use bdg-shell and prefer pure spark-shell you can of course do that. But to use SeQuiLa's efficient interval queries you have to configure it appropriately.
-
-.. code-block:: bash
-
-
-   docker run -e USERID=$UID -e GROUPID=$(id -g) \
-      -it --rm biodatageeks/|project_name|:|version| \
-     spark-shell --packages org.biodatageeks:bdg-sequila_2.11:|version| \
-      --conf spark.sql.warehouse.dir=/home/bdgeek/spark-warehouse \
-      --repositories https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/,https://zsibio.ii.pw.edu.pl/nexus/repository/maven-snapshots/
-
-And inside the shell:
-
-.. code-block:: scala
-
-   import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
-
-   /*set params*/
-
-   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.useJoinOrder","false")
-   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxBroadcastSize", (128*1024*1024).toString)
-
-   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.minOverlap","1")
-   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxGap","0")
-
-   /*register UDFs*/
-
-   UDFRegister.register(spark)
-
-   /*inject bdg-granges strategy*/
-   SequilaRegister.register(spark)
-
-It seems like there is a lot of configuration required - therefore we recommend using bdg-shell instead.
-
-.. note::
-
-   There are many other ways of how you can use SeQuiLa. Please refer to :doc:`../usage/usage`
-
-
-
-
-
-Writing short analysis in bdg-shell
-************************************
-
-For Scala enthusiasts - SeQuiLa provides bdg-shell which is a wrapper for spark-shell. It has extra strategy registered  and configuration already set, so it is fit for quick analysis.
-
-   |
 
 .. figure:: bdg-shell.*
 
@@ -208,6 +180,81 @@ For Scala enthusiasts - SeQuiLa provides bdg-shell which is a wrapper for spark-
    val targets = spark.read.parquet("/data/granges/tgp_exome_hg18.adam")
    targets.createOrReplaceTempView("targets")
    sqlContext.sql(query)
+
+
+
+Analyses in spark-shell
+*************************
+
+If for any reason you do not want to use bdg-shell and prefer pure spark-shell you can of course do that. But to use SeQuiLa's efficient interval queries or depth of coverage modules you have to configure it appropriately.
+
+.. code-block:: bash
+
+
+   docker run -e USERID=$UID -e GROUPID=$(id -g) \
+      -it --rm biodatageeks/|project_name|:|version| \
+     spark-shell --packages org.biodatageeks:bdg-sequila_2.11:|version| \
+      --conf spark.sql.warehouse.dir=/home/bdgeek/spark-warehouse \
+      --repositories https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/,https://zsibio.ii.pw.edu.pl/nexus/repository/maven-snapshots/
+
+And inside the shell:
+
+.. code-block:: scala
+
+   import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
+
+   /*set params*/
+
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.useJoinOrder","false")
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxBroadcastSize", (128*1024*1024).toString)
+
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.minOverlap","1")
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxGap","0")
+
+   /*register UDFs*/
+
+   UDFRegister.register(spark)
+
+   /*inject bdg-granges strategy*/
+   SequilaRegister.register(spark)
+
+It seems like there is a lot of configuration required - therefore we recommend using bdg-shell instead.
+
+Afterwards you can proceed with e.g. depth of coverage calculations
+
+.. code-block:: scala
+
+   val tableNameBAM = "reads"
+  //
+  // path to your BAM file 
+  val bamPath = "file:///Users/aga/workplace/data/NA12878.chr21.bam"
+  // create database DNA
+  ss.sql("CREATE DATABASE dna")
+  ss.sql("USE dna")
+
+   // create table reads using BAM data source
+   ss.sql(
+      s"""
+         |CREATE TABLE ${tableNameBAM}
+         |USING org.biodatageeks.datasources.BAM.BAMDataSource
+         |OPTIONS(path "${bamPath}")
+         |
+    """.stripMargin)
+
+  //calculate coverage - example for blocks coverage
+  
+  ss.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878.chr21', 'blocks')").show(5)
+  
+          +----------+-----+---+--------+
+          |contigName|start|end|coverage|
+          +----------+-----+---+--------+
+          |      chr1|   34| 34|       1|
+          |      chr1|   35| 35|       2|
+          |      chr1|   36| 37|       3|
+          |      chr1|   38| 40|       4|
+          |      chr1|   41| 49|       5|
+          +----------+-----+---+--------+
+
 
 
 

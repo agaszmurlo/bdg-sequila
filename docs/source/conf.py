@@ -46,7 +46,7 @@ extensions = [
 #    'sphinx.ext.ifconfig',
     'sphinxcontrib.bibtex',
     'sphinx.ext.autosectionlabel',
-     'rst2pdf.pdfbuilder'
+    'rst2pdf.pdfbuilder'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
