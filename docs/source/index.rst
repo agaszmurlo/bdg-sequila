@@ -87,9 +87,10 @@ Example.scala
 .. rubric:: Release notes:
 
 0.5.5 (2019-05-01)
- - improved long reads support
+ - improved algorithm for long reads support
  - added hadoop-bam support for long reads
  - fixed errors in hadoop-bam caused by not closing IO stream
+ - standardizing showAllPositions parameter, leading to reduced output size
  - bumped Apache Spark version to 2.4.2
 
 0.5.4 (2019-04-13)
