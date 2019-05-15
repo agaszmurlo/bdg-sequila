@@ -537,6 +537,32 @@ On the image below you can find performance and scalability comparison of samtoo
 
 .. image:: coverage.*
 
+Base level coverage performance comparison for WES dataset with samtools
+------------------------------------------------------------------------
+
+=====   ============== =============== ========
+cores   sequila(bases) sequila(blocks) samtools
+=====   ============== =============== ========
+1       17m 13s           6m 54s        12m 26s
+5        4m 17s           1m 47s          -
+10       2m 21s           1m 04s          -
+=====   ============== =============== ========
+
+
+CRAM versus BAM performance comparison for WES dataset (blocks)
+---------------------------------------------------------------
+
+
+=====   ============== ============
+cores   sequila(CRAM)  sequila(BAM)
+=====   ============== ============
+1        26m 27s          6m 54s
+5        4m 35s           1m 47s
+10       2m 54s           1m 04s
+25       1m 44s           0m 28s
+50       1m 15s           0m 20s
+=====   ============== ============
+
 Discussion
 -----------
 Both samtools and bedtools calculate coverage  using only a single thread, however, their results differ significantly, with samtools being around twice as fast. Sambamba positions itself as a multithreaded solution although our tests revealed that its execution time is nearly constant, regardless of the number of CPU cores used, and even twice as slow as samtools. 
