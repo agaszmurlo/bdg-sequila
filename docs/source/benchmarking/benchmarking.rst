@@ -69,7 +69,7 @@ Datasets
 Two NGS datasets have been used in all the tests.
 WES (whole exome sequencing) and WGS (whole genome sequencing) datasets have been used for vertical and horizontal scalability
 evaluation respectively. Both of them came from sequencing of NA12878 sample that is widely used in many benchmarks.
-For long read support we have added NA12878 genome-wide aligned reads dataset. 
+For long read support we have added NA12878 genome-wide aligned reads dataset.
 The table below presents basic datasets information:
 
 =========   ======  =========    ==========
@@ -88,7 +88,7 @@ WES-SN - tests performed on a single node using WES dataset
 
 WGS-CL - tests performed on a cluster using WGS dataset
 
-WGS-LG - test performed on a single node 
+WGS-LG - test performed on a single node
 
 
 Test procedure
@@ -574,6 +574,41 @@ cores   sequila(CRAM)  sequila(BAM)
 25       1m 44s           0m 28s
 50       1m 15s           0m 20s
 =====   ============== ============
+
+
+Performance of saving coverage results as a single BED file
+-----------------------------------------------------------
+
+In order to get coverage reults as a single file we need to explicite use ``coalesce`` method to merge records from
+all the partitions before writing them to the storage. Such an approach causes of course some performance degradation
+as the data cannot be written in parallel (distributed) fashion and by nature its uncompressed and in text format.
+Equally, due to the fact there is only one thread used for writing, the scalability is impaired as well.
+
+.. code-block:: scala
+
+    import org.apache.spark.sql.SequilaSession
+    import org.biodatageeks.utils.{SequilaRegister, UDFRegister,BDGInternalParams}
+
+    val ss = SequilaSession(spark)
+    SequilaRegister.register(ss)
+    ss.sqlContext.setConf("spark.biodatageeks.bam.useGKLInflate","true")
+    ss.sql("""CREATE TABLE IF NOT EXISTS reads_exome USING org.biodatageeks.datasources.BAM.BAMDataSource OPTIONS(path '/data/exome/NA12878.*.bam')""")
+    spark.time { ss.sql(s"SELECT * FROM bdg_coverage('reads_exome','NA12878', 'blocks')")
+            .coalesce(1)
+            .write.mode("overwrite")
+            .option("delimiter", "\t")
+            .csv("/data/granges/exome/coverage.bed")}
+
+
+
+=====   ========================   ======================
+cores   sequila(BED,coalesce(1))   sequila(Parquet,split)
+=====   ========================   ======================
+1       11m 59s                    6m 54s
+5        4m 56s                    1m 47s
+10       4m 05s                    1m 04s
+=====   ========================   ======================
+
 
 
 Long reads support
