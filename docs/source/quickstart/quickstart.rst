@@ -54,62 +54,6 @@ Congratulations! Your installation is working on sample data.
 
 
 
-Launch bdg-shell
-****************
-
-Here we will launch bdg-shell which is actually spark-shell wrapped by biodatageeks with some additional configuration.
-So if you are familiar with Scala you will be able to use SeQuiLa right away.
-
-.. code-block:: bash
-
-
-   docker run -e USERID=$UID -e GROUPID=$(id -g) \
-   	-it --rm biodatageeks/|project_name|:|version| \
-     bdg-shell 
-
-And voila you should see bdg-shell collecting its depenedencies and starting off. Now you are ready to load your sample data and do some interval queries playing on your own.
-
-Launch spark-shell
-********************
-
-If for any reason you do not want to use bdg-shell and prefer pure spark-shell you can of course do that. But to use SeQuiLa's efficient interval queries you have to configure it appropriately.
-
-.. code-block:: bash
-
-
-   docker run -e USERID=$UID -e GROUPID=$(id -g) \
-   	-it --rm biodatageeks/|project_name|:|version| \
-     spark-shell --packages org.biodatageeks:bdg-sequila_2.11:|version| \
-  		--conf spark.sql.warehouse.dir=/home/bdgeek/spark-warehouse \
- 		--repositories https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/,https://zsibio.ii.pw.edu.pl/nexus/repository/maven-snapshots/
-
-And inside the shell:
-
-.. code-block:: scala
-
-   import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
-
-   /*set params*/
-
-   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.useJoinOrder","false")
-   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxBroadcastSize", (128*1024*1024).toString)
-
-   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.minOverlap","1")
-   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxGap","0")
-
-   /*register UDFs*/
-
-   UDFRegister.register(spark)
-
-   /*inject bdg-granges strategy*/
-   SequilaRegister.register(spark)
-
-It seems like there is a lot of configuration required - therefore we recommend using bdg-shell instead.
-
-.. note::
-
-   There are many other ways of how you can use SeQuiLa. Please refer to :doc:`../usage/usage`
-
 
 Ad-hoc analysis
 #################
@@ -153,6 +97,67 @@ Parameters passed to featureCounts are divided into two parts: equivalent to par
 .. note::
 
    If you are using zsh shell remember to put double-quotes (") when specifying master local with specified number threads. ``--master "local[4]"``
+
+
+
+Launch bdg-shell
+#################
+
+Here we will launch bdg-shell which is actually spark-shell wrapped by biodatageeks with some additional configuration.
+So if you are familiar with Scala you will be able to use SeQuiLa right away.
+
+.. code-block:: bash
+
+
+   docker run -e USERID=$UID -e GROUPID=$(id -g) \
+      -it --rm biodatageeks/|project_name|:|version| \
+     bdg-shell 
+
+And voila you should see bdg-shell collecting its depenedencies and starting off. Now you are ready to load your sample data and do some interval queries or coverage analyses on your own.
+
+Launch spark-shell
+###################
+
+If for any reason you do not want to use bdg-shell and prefer pure spark-shell you can of course do that. But to use SeQuiLa's efficient interval queries you have to configure it appropriately.
+
+.. code-block:: bash
+
+
+   docker run -e USERID=$UID -e GROUPID=$(id -g) \
+      -it --rm biodatageeks/|project_name|:|version| \
+     spark-shell --packages org.biodatageeks:bdg-sequila_2.11:|version| \
+      --conf spark.sql.warehouse.dir=/home/bdgeek/spark-warehouse \
+      --repositories https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/,https://zsibio.ii.pw.edu.pl/nexus/repository/maven-snapshots/
+
+And inside the shell:
+
+.. code-block:: scala
+
+   import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
+
+   /*set params*/
+
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.useJoinOrder","false")
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxBroadcastSize", (128*1024*1024).toString)
+
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.minOverlap","1")
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxGap","0")
+
+   /*register UDFs*/
+
+   UDFRegister.register(spark)
+
+   /*inject bdg-granges strategy*/
+   SequilaRegister.register(spark)
+
+It seems like there is a lot of configuration required - therefore we recommend using bdg-shell instead.
+
+.. note::
+
+   There are many other ways of how you can use SeQuiLa. Please refer to :doc:`../usage/usage`
+
+
+
 
 
 Writing short analysis in bdg-shell
