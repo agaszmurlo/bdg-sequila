@@ -69,6 +69,7 @@ Datasets
 Two NGS datasets have been used in all the tests.
 WES (whole exome sequencing) and WGS (whole genome sequencing) datasets have been used for vertical and horizontal scalability
 evaluation respectively. Both of them came from sequencing of NA12878 sample that is widely used in many benchmarks.
+For long read support we have added NA12878 genome-wide aligned reads dataset. 
 The table below presents basic datasets information:
 
 =========   ======  =========    ==========
@@ -80,11 +81,14 @@ WES-SN      BED     0.0045       193557
 WGS-CL      BAM     273          2617420313
 WGS-CL      ADAM    215          2617420313
 WGS-CL      BED     0.0016       68191
+WGS-LG      BAM     127
 =========   ======  =========    ==========
 
 WES-SN - tests performed on a single node using WES dataset
 
 WGS-CL - tests performed on a cluster using WGS dataset
+
+WGS-LG - test performed on a single node 
 
 
 Test procedure
@@ -481,6 +485,14 @@ For calculating the coverage the following commands have been used:
     spark.time{
     ss.sql(s"SELECT * FROM bdg_coverage('reads_exome','NA12878', 'blocks', '500')").write.format("parquet").save("/tmp/fp16yq/data/32MB_w500_3.parquet") }
 
+    /* long reads */
+    ss.sql("""
+      CREATE TABLE IF NOT EXISTS qreads
+      USING org.biodatageeks.datasources.BAM.BAMDataSource
+      OPTIONS(path '/data/granges/nanopore/guppy.bam')""")
+
+    ss.sql(s"SELECT contigName, start, end, coverage FROM bdg_coverage('qreads','NA12878', 'blocks')").write.mode("overwrite").option("delimiter", "\t").csv("/data/granges/nanopore/guppy_cov.bed")}
+
 
 
 
@@ -562,6 +574,18 @@ cores   sequila(CRAM)  sequila(BAM)
 25       1m 44s           0m 28s
 50       1m 15s           0m 20s
 =====   ============== ============
+
+
+Long reads support
+---------------------
+
+We have tested coverage calculation for long reads in terms of wall-time and quality of the results. We have achieved identical results with samtools when run in 'bases' mode.
+
+=====   ============== ================
+cores   samtools       sequila(blocks)
+=====   ============== ================
+1        26m 27s          6m 54s
+=====   ============== ================
 
 Discussion
 -----------

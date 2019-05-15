@@ -25,6 +25,39 @@ process and query them using a SQL interface:
     ss.sql("SELECT sampleId,contigName,start,end,cigar FROM reads").show(5)
 
 
+The BAM file can contain aligned short reads or long reads. The structure and syntax of the analyses does not depend on the lenght of reads.
+
+.. code-block:: scala
+
+    val tableNameBAM = "reads"
+    ss.sql("CREATE DATABASE BDGEEK")
+    ss.sql("USE BDGEEK")
+    ss.sql(
+      s"""
+         |CREATE TABLE ${tableNameBAM}
+         |USING org.biodatageeks.datasources.BAM.BAMDataSource
+         |OPTIONS(path "/data/input/longs/rel5-guppy-0.3.0-chunk10k.sorted.bam.bam")
+         |
+      """.stripMargin)
+    ss.sql("SELECT sampleId,contigName,start,end,cigar FROM reads").show(5)
+
+
+
+.. code-block:: scala
+
+    val tableNameBAM = "reads"
+    ss.sql("CREATE DATABASE BDGEEK")
+    ss.sql("USE BDGEEK")
+    ss.sql(
+      s"""
+         |CREATE TABLE ${tableNameBAM}
+         |USING org.biodatageeks.datasources.BAM.BAMDataSource
+         |OPTIONS(path "/data/input/multisample/*.bam")
+         |
+      """.stripMargin)
+    ss.sql("SELECT sampleId,contigName,start,end,cigar FROM reads").show(5)
+
+
 In case of CRAM file format you need to specify both globbed path to the CRAM files as well as path to the reference file (both *.fa and *.fa.fai)
 files should stored together in the same folder, e.g.:
 
@@ -43,6 +76,7 @@ files should stored together in the same folder, e.g.:
            |
       """.stripMargin)
     ss.sql("SELECT sampleId,contigName,start,end,cigar FROM reads_cram").show(5)
+
 
 
 
