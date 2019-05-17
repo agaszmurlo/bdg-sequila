@@ -43,20 +43,6 @@ The BAM file can contain aligned short reads or long reads. The structure and sy
 
 
 
-.. code-block:: scala
-
-    val tableNameBAM = "reads"
-    ss.sql("CREATE DATABASE BDGEEK")
-    ss.sql("USE BDGEEK")
-    ss.sql(
-      s"""
-         |CREATE TABLE ${tableNameBAM}
-         |USING org.biodatageeks.datasources.BAM.BAMDataSource
-         |OPTIONS(path "/data/input/multisample/*.bam")
-         |
-      """.stripMargin)
-    ss.sql("SELECT sampleId,contigName,start,end,cigar FROM reads").show(5)
-
 
 In case of CRAM file format you need to specify both globbed path to the CRAM files as well as path to the reference file (both *.fa and *.fa.fai)
 files should stored together in the same folder, e.g.:
@@ -362,3 +348,27 @@ ADAM data source can be defined in the analogues way (just requires using org.bi
          |
       """.stripMargin)
     ss.sql("SELECT sampleId,contigName,start,end,cigar FROM reads_adam").show(5)
+
+
+
+BED
+****
+Coverage information can be exported to standard BED format. Actually, calculated data can be stored in any kind of text file (csv, tsv etc). Example export command 
+
+.. code-block:: scala
+
+    val tableNameADAM = "reads_adam"
+    ss.sql("CREATE DATABASE BDGEEK")
+    ss.sql("USE BDGEEK")
+    ss.sql(
+      s"""
+         |CREATE TABLE ${tableNameADAM}
+         |USING org.biodatageeks.datasources.ADAM.ADAMDataSource
+         |OPTIONS(path "/data/input/multisample/*.bame")
+         |
+      """.stripMargin)
+    val cov = ss.sql("SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878', 'blocks')")
+    cov.coalesce(1).write.mode("overwrite").option("delimiter", "\t").csv("/data/output/cov.bed")
+
+
+

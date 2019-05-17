@@ -69,7 +69,6 @@ Datasets
 Two NGS datasets have been used in all the tests.
 WES (whole exome sequencing) and WGS (whole genome sequencing) datasets have been used for vertical and horizontal scalability
 evaluation respectively. Both of them came from sequencing of NA12878 sample that is widely used in many benchmarks.
-For long read support we have added NA12878 genome-wide aligned reads dataset. 
 The table below presents basic datasets information:
 
 =========   ======  =========    ==========
@@ -81,14 +80,12 @@ WES-SN      BED     0.0045       193557
 WGS-CL      BAM     273          2617420313
 WGS-CL      ADAM    215          2617420313
 WGS-CL      BED     0.0016       68191
-WGS-LG      BAM     127
 =========   ======  =========    ==========
 
 WES-SN - tests performed on a single node using WES dataset
 
 WGS-CL - tests performed on a cluster using WGS dataset
 
-WGS-LG - test performed on a single node 
 
 
 Test procedure
@@ -310,11 +307,15 @@ Data        Format  Size [GB]    Row count   test data URL                      
 =========   ======  =========    ========== ========================================================================================== =====================
 WES          BAM     17          161544693  `WES BAM <http://biodatageeks.org/sequila/data/WES/NA12878.proper.wes.bam>`_                `original WES BAM <ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/working/20101201_cg_NA12878/NA12878.ga2.exome.maq.recal.bam>`_
 WGS          BAM     273         2617420313 `WGS BAM <http://biodatageeks.org/sequila/data/WGS/NA12878.proper.wgs.bam>`_                `original WGS BAM <ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/working/20101201_cg_NA12878/NA12878.hiseq.wgs.bwa.recal.bam>`_
+WGS-L        BAM     127         22314075   `WGS-L BAM <http://biodatageeks.org/sequila/data/rel5-guppy-0.3.0-chunk10k.sorted.bam>`_   `original WGS-L BAM <https://s3.amazonaws.com/nanopore-human-wgs/rel5-guppy-0.3.0-chunk10k.sorted.bam>`_
 =========   ======  =========    ========== ========================================================================================== =====================
+
 
 WES - tests performed on a single node using WES dataset
 
 WGS - tests performed on a cluster using WGS dataset
+
+WGS-L - tests performed on a single node using WGS dataset (long reads)
 
 
 Test procedure
@@ -584,7 +585,9 @@ We have tested coverage calculation for long reads in terms of wall-time and qua
 =====   ============== ================
 cores   samtools       sequila(blocks)
 =====   ============== ================
-1        26m 27s          6m 54s
+1        95m 8s         83m 3s
+5                       17m 25s
+10                      9m 10s
 =====   ============== ================
 
 Discussion
