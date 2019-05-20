@@ -749,10 +749,10 @@ Nanopore long reads from WGS analyses
     +--------------------------------+
 
 
-  /*Albacore mapper*/
+  /*Albacore base caller*/
   spark.time{
   ss.sql(s"SELECT * FROM bdg_coverage('reads_nanopore','NA12878-Albacore2.1.sorted', 'blocks')").write.format("parquet").save("/tmp/NA12878-Albacore2.1.sorted.parquet")}
 
-  /*guppy mapper*/
+  /*guppy base caller*/
   spark.time{
   ss.sql(s"SELECT * FROM bdg_coverage('reads_nanopore','rel5-guppy-0.3.0-chunk10k.sorted', 'blocks')").write.format("parquet").save("/tmp/rel5-guppy-0.3.0-chunk10k.sorted.parquet")}
