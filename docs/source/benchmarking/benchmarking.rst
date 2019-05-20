@@ -553,6 +553,8 @@ On the image below you can find performance and scalability comparison of samtoo
 Base level coverage performance comparison for WES dataset with samtools
 ------------------------------------------------------------------------
 
+The wall-time on a single core is comparable to the Samtools’ solution. We re-confirmed the scalability of SeQuiLa-cov with the base level output and significant time reduction when executed in distributed environment 
+
 =====   ============== =============== ========
 cores   sequila(bases) sequila(blocks) samtools
 =====   ============== =============== ========
@@ -564,6 +566,7 @@ cores   sequila(bases) sequila(blocks) samtools
 
 CRAM versus BAM performance comparison for WES dataset (blocks)
 ---------------------------------------------------------------
+
 We observed that timings for processing CRAM files are ~2.5 - 4 times higher than for BAM files.
 Importantly, the processing times of the coverage calculation algorithm are equal for BAMs and CRAMs, however the reading stage is significantly slower in case of the latter one. Further speedup of processing CRAM files with SeQuiLa will require significant reimplementation of the data access layer which is an important direction of our future work.
 
