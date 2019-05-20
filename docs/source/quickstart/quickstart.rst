@@ -4,17 +4,27 @@ Quickstart
 ===========
 
 
-SeQuiLa is perfect for quick, ad-hoc analysis. Sequila is distributed as Docker image. It is available at DockerHub. 
+Use SeQuiLa Docker image
+#########################
+
+SeQuiLa is perfect for quick, ad-hoc analysis. Sequila is distributed as Docker image. It is available at DockerHub.
+
+In SeQuiLa's docker image are two predefined scripts written to be executable from commandline in good-old fashion.  No need of Scala and Spark is needed.
+
+   |
+
+.. figure:: docker.*
+
+
+Test run
+**********
+
 
 The quickest way to test sequila is to run test example on sample data which are already packaged in docker container.
 
 .. note::
 
    Prerequisities: You should have docker daemon installed and running. `<https://docs.docker.com/install/>`_
-
-Test run 
-##########
-
 
 In your command line pull docker image from Docker Hub and invoke smoketests
 
@@ -46,23 +56,13 @@ Congratulations! Your installation is working on sample data.
 
 
 
-Commandline scripts
-#####################
+featureCounts script
+*********************
 
-In SeQuiLa's docker image are two predefined scripts written to be executable from commandline in good-old fashion.  No need of Scala and Spark is needed.
-
-   |
-
-.. figure:: docker.*
-
-   
 Sample usage of SeQuiLa wrapped in docker container's scripts.
 The snippet below shows how to download sample data files into specific directory, then run the container with mounted volume.
 The result should appear in specified output directory.
 
-
-featureCounts
-***************
 
 Parameters passed to featureCounts are divided into two parts: equivalent to parameters passed for spark-submit (master, executor-memory, driver-memory etc.: `<https://spark.apache.org/docs/latest/submitting-applications.html>`_) and parameters passed to featureCounts itself (input files, output files, format).
 
@@ -91,8 +91,8 @@ Parameters passed to featureCounts are divided into two parts: equivalent to par
    If you are using zsh shell remember to put double-quotes (") when specifying master local with specified number threads. ``--master "local[4]"``
 
 
-depthOfCoverage
-*****************
+depthOfCoverage script
+***********************
 
 Parameters passed to depthOfCoverage are divided into two parts: equivalent to parameters passed for spark-submit (master, executor-memory, driver-memory etc.: `<https://spark.apache.org/docs/latest/submitting-applications.html>`_) and parameters passed to featureCounts itself (input reads file, output file, format).
 
@@ -118,10 +118,6 @@ Parameters passed to depthOfCoverage are divided into two parts: equivalent to p
 
    If you are using zsh shell remember to put double-quotes (") when specifying master local with specified number threads. ``--master "local[4]"``
 
-
-
-Ad-hoc analyses in Scala
-##########################
 
 Analyses in bdg-shell
 **********************
@@ -256,5 +252,116 @@ Afterwards you can proceed with e.g. depth of coverage calculations
           +----------+-----+---+--------+
 
 
+Use SeQuiLa directly
+######################
+
+SeQuiLa can be used directly as an extension to Apache Spark. We are publishing SeQuiLa JAR files in public repositories: https://zsibio.ii.pw.edu.pl/nexus/#browse/browse/components:maven-snapshots and https://zsibio.ii.pw.edu.pl/nexus/#browse/browse/components:maven-releases. 
+
+
+Analyses in spark-shell
+*************************
+
+.. note::
+
+   Prerequisities: For execution in local mode, you should have installed Apache Spark on your machine. When executing on computation cluster you should have setup Spark ecosystem up and running (including HDFS, YARN and Spark itself)
+
+In order to use our extensions when performing analysis in spark-shell you need to pass SeQuiLa library dependency to Spark.
+
+.. code-block:: bash
+
+  cd $SPARK_HOME/bin
+
+  # 1
+  # run spark shell with SeQuiLa passed as dependency
+  # include additional repositories to download JAR file
+  # run in local mode, specified required driver memory
+
+  ./spark-shell -v \
+  --master=local[10]
+  --driver-memory=12g  \
+  --repositories http://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/,http://zsibio.ii.pw.edu.pl/nexus/repository/maven-snapshots/ \
+  --packages org.biodatageeks:bdg-sequila_2.11:|version|
+
+  # 2
+  # run spark shell with SeQuiLa passed as dependency
+  # include additional repositories to download JAR file
+  # run on cluster using YARN, specified number of executors and required memory for executors 
+
+    ./spark-shell -v \
+  --master=yarn --deploy-mode=client \
+  --num-executors=60 --executor-memory=4g \
+  --driver-memory=12g  \
+  --repositories http://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/,http://zsibio.ii.pw.edu.pl/nexus/repository/maven-snapshots/ \
+  --packages org.biodatageeks:bdg-sequila_2.11:|version|
+
+
+  # 3
+  # download assembly file and store in /tmp
+
+  wget -P /tmp \
+   org/biodatageeks/bdg-sequila_2.11/|version|/bdg-sequila_2.11-|version|-assembly.jar
+
+  # run spark shell with SeQuiLa passed as assembly JAR
+  # run in local mode, specified required driver memory
+
+    ./spark-shell -v \
+  --master=local[10]
+  --driver-memory=12g  \
+  --jars /tmp/bdg-sequila_2.11-|version|-assembly.jar
+
+
+Once the spark-shell with SeQuiLa extension has been startup you can  import necessary classes and perform tha analyses.
+
+
+
+
+.. code-block:: scala
+
+   import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
+
+   /*set params*/
+
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.useJoinOrder","false")
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxBroadcastSize", (128*1024*1024).toString)
+
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.minOverlap","1")
+   spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxGap","0")
+
+   /*register UDFs*/
+
+   UDFRegister.register(spark)
+
+   /*inject bdg-granges strategy*/
+   SequilaRegister.register(spark)
+   val tableNameBAM = "reads"
+  //
+  // path to your BAM file 
+  val bamPath = "file:///Users/aga/workplace/data/NA12878.chr21.bam"
+  // create database DNA
+  ss.sql("CREATE DATABASE dna")
+  ss.sql("USE dna")
+
+   // create table reads using BAM data source
+   ss.sql(
+      s"""
+         |CREATE TABLE ${tableNameBAM}
+         |USING org.biodatageeks.datasources.BAM.BAMDataSource
+         |OPTIONS(path "${bamPath}")
+         |
+    """.stripMargin)
+
+  //calculate coverage - example for blocks coverage
+  
+  ss.sql(s"SELECT * FROM bdg_coverage('${tableNameBAM}','NA12878.chr21', 'blocks')").show(5)
+  
+          +----------+-----+---+--------+
+          |contigName|start|end|coverage|
+          +----------+-----+---+--------+
+          |      chr1|   34| 34|       1|
+          |      chr1|   35| 35|       2|
+          |      chr1|   36| 37|       3|
+          |      chr1|   38| 40|       4|
+          |      chr1|   41| 49|       5|
+          +----------+-----+---+--------+
 
 

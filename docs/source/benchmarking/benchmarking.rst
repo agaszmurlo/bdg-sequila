@@ -482,9 +482,9 @@ For calculating the coverage the following commands have been used:
     ss.sqlContext.setConf("spark.biodatageeks.bam.useSparkBAM","false")
     /*bases-blocks*/
   ss.sql("""
-    CREATE TABLE IF NOT EXISTS reads_exome USING org.biodatageeks.datasources.BAM.BAMDataSource OPTIONS(path '/tmp/fp16yq/data/exome/32MB/*.bam')""")
+    CREATE TABLE IF NOT EXISTS reads_exome USING org.biodatageeks.datasources.BAM.BAMDataSource OPTIONS(path '/tmp/data/exome/*.bam')""")
     spark.time{
-    ss.sql(s"SELECT * FROM bdg_coverage('reads_exome','NA12878', 'blocks', '500')").write.format("parquet").save("/tmp/fp16yq/data/32MB_w500_3.parquet") }
+    ss.sql(s"SELECT * FROM bdg_coverage('reads_exome','NA12878', 'blocks', '500')").write.format("parquet").save("/tmp/data/32MB_w500_3.parquet") }
 
     /* long reads */
     ss.sql("""
