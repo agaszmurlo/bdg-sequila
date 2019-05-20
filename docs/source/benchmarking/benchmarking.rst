@@ -564,6 +564,9 @@ cores   sequila(bases) sequila(blocks) samtools
 
 CRAM versus BAM performance comparison for WES dataset (blocks)
 ---------------------------------------------------------------
+We observed that timings for processing CRAM files are ~2.5 - 4 times higher than for BAM files.
+Importantly, the processing times of the coverage calculation algorithm are equal for BAMs and CRAMs, however the reading stage is significantly slower in case of the latter one. Further speedup of processing CRAM files with SeQuiLa will require significant reimplementation of the data access layer which is an important direction of our future work.
+
 
 
 =====   ============== ============
@@ -581,9 +584,8 @@ Performance of saving coverage results as a single BED file
 -----------------------------------------------------------
 
 In order to get coverage reults as a single file we need to explicite use ``coalesce`` method to merge records from
-all the partitions before writing them to the storage. Such an approach causes of course some performance degradation
-as the data cannot be written in parallel (distributed) fashion and by nature its uncompressed and in text format.
-Equally, due to the fact there is only one thread used for writing, the scalability is impaired as well.
+all the partitions before writing them to the storage. Such an approach causes performance degradation
+as the data cannot be written in distributed fashion. Equally, due to the fact there is only one thread used for writing, the scalability is impaired as well.
 
 .. code-block:: scala
 
