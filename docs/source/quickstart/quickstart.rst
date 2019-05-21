@@ -80,8 +80,12 @@ Parameters passed to featureCounts are divided into two parts: equivalent to par
       -e USERID=$UID -e GROUPID=$(id -g) \
       biodatageeks/|project_name|:|version| \
       featureCounts -- \ 
-      -o /data/featureOutput -F SAF \
+      -o /data/featureOutput.bed -F SAF \
       -a /data/tgp_exome_hg18.saf /data/NA12878.slice.bam
+
+   head /data/featureOutput.bed
+
+
 
 
 
@@ -107,9 +111,12 @@ Parameters passed to depthOfCoverage are divided into two parts: equivalent to p
       -v /data/sequila:/data \ 
       -e USERID=$UID -e GROUPID=$(id -g) \
       biodatageeks/|project_name|:|version| \
-      depthOfCoverage -- \ 
+      depthOfCoverage --master local -- \ 
       --reads /data/NA12878.slice.bam --format blocks \
       --output /data/NA12878.cov.bed
+
+      head /data/NA12878.cov.bed
+
 
 
 
@@ -119,7 +126,7 @@ Parameters passed to depthOfCoverage are divided into two parts: equivalent to p
    If you are using zsh shell remember to put double-quotes (") when specifying master local with specified number threads. ``--master "local[4]"``
 
 
-Analyses in bdg-shell
+bdg-shell in container
 **********************
 
 Here we will launch bdg-shell which is actually spark-shell wrapped with some additional configuration.
@@ -179,7 +186,7 @@ And voila you should see bdg-shell collecting its depenedencies and starting off
 
 
 
-Analyses in spark-shell
+spark-shell in container
 *************************
 
 If for any reason you do not want to use bdg-shell and prefer pure spark-shell you can of course do that. But to use SeQuiLa's efficient interval queries or depth of coverage modules you have to configure it appropriately.
@@ -363,5 +370,41 @@ Once the spark-shell with SeQuiLa extension has been startup you can  import nec
           |      chr1|   38| 40|       4|
           |      chr1|   41| 49|       5|
           +----------+-----+---+--------+
+
+
+Use SeQuiLa directly in Scala app
+*************************************
+
+If you want to embedd SeQuiLa in your Scala application and run it on Spark cluster you need to add SeQuiLa as dependency in build.sbt file and include biodatageeks repositories as additional resolvers.
+
+build.sbt
+
+.. code-block:: scala
+
+    libraryDependencies +=  "org.biodatageeks" % "|project_name|_2.11" % "|version|"
+
+    resolvers +=  "biodatageeks-releases" at "https://zsibio.ii.pw.edu.pl/nexus/repository/maven-releases/"
+    resolvers +=  "biodatageeks-snapshots" at "https://zsibio.ii.pw.edu.pl/nexus/repository/maven-snapshots/"
+
+In your code you need to import required classes, create and register SequilaSession and you are ready to go.
+
+.. code-block:: scala
+
+    import org.biodatageeks.utils.{SequilaRegister, UDFRegister}
+    import org.apache.spark.sql.SequilaSession
+    import org.apache.spark.sql.SparkSession
+
+    val spark = SparkSession.builder()
+        .getOrCreate()
+    val ss = new SequilaSession(spark)
+    SequilaRegister.register(ss)
+    UDFRegister.register(ss)
+    ss.sql(...)
+
+Finally, once the whole application is ready you can submit it to Spark cluster using spark-submit command accordingly to `Spark documentation <https://spark.apache.org/docs/latest/submitting-applications.html>`_ 
+
+.. code-block:: bash
+  
+  spark-submit --master=yarn  --deploy-mode=client /path/to/jar/bioinfoAnalysis.jar
 
 

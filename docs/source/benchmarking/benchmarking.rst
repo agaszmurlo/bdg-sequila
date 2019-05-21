@@ -286,8 +286,9 @@ mosdepth        0.2.4   using --fast-mode option
 =============   ======= ========================
 
 
-Datasets
-********
+Datasets for coverage tests
+****************************
+
 Two NGS datasets have been used in all the tests.
 WES (whole exome sequencing) and WGS (whole genome sequencing) datasets have been used for vertical and horizontal scalability
 evaluation respectively. Both of them came from sequencing of NA12878 sample that is widely used in many benchmarks.
