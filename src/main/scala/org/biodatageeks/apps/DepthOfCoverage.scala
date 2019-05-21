@@ -38,7 +38,7 @@ object DepthOfCoverage {
 
     spark
       .sparkContext
-      .setLogLevel("WARN")
+      .setLogLevel("ERROR")
 
     spark
       .sparkContext
@@ -52,9 +52,6 @@ object DepthOfCoverage {
     ss.sql(s"""CREATE TABLE IF NOT EXISTS reads  USING org.biodatageeks.datasources.BAM.BAMDataSource  OPTIONS(path '${runConf.reads()}')""")
 
     val sample = ss.sql(s"SELECT DISTINCT (sampleId) from reads").first().get(0)
-    println(s"Input file: ${runConf.reads()}")
-    println(s"Format: ${runConf.format()}")
-    println(s"Sample: $sample")
 
 
     val query = "SELECT * FROM bdg_coverage('reads', '%s', '%s')".format(sample, runConf.format())

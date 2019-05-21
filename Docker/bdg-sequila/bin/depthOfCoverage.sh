@@ -6,8 +6,10 @@ sparkParams=`echo $@ | sed 's/-- /|/g' | cut -f1 -d'|'`
 readsFile=`echo ${@:$#}`
 
 substr="master"
+
 if case ${sparkParams} in *"${substr}"*) true;; *) false;; esac; then
-    echo "Master specified"
+    #echo "Master specified"
+    echo
  else
     echo "Master not specified, adding --master=local[*]"
     master=" --master local[*] "
@@ -44,9 +46,9 @@ spark-submit ${sparkParams} --class org.biodatageeks.apps.DepthOfCoverage /tmp/b
 
 if [ -e "$outfile" ]
 then
-mv ${outfile}/p*  ${outfile}_tmp
-rm -rf $outfile
-mv ${outfile}_tmp $outfile
+    mv ${outfile}/part*  ${outfile}_tmp
+    rm -rf $outfile
+    mv ${outfile}_tmp $outfile
 fi
 
 

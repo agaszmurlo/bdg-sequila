@@ -44,7 +44,7 @@ spark-submit -v ${sparkParams} --class org.biodatageeks.apps.FeatureCounts /tmp/
 
 if [ -e "$outfile" ]
 then
-mv ${outfile}/part*  ${outfile}_tmp
-rm -rf $outfile
-mv ${outfile}_tmp $outfile
+    mv ${outfile}/part*  ${outfile}_tmp
+    rm -rf $outfile
+    mv ${outfile}_tmp $outfile
 fi
