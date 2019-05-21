@@ -17,13 +17,13 @@ if case ${sparkParams} in *"${substr}"*) true;; *) false;; esac; then
 
 outfile=`echo $appParams | sed -n "s/^.*-o \([^ ]*\) .*$/\1/p"`
 
-echo "Checking output directory " $outfile
+#echo "Checking output directory " $outfile
 
-if [ -e "$outfile" ]
-then
-    echo "Output directory already exists, please remove"
-    exit 1;
-fi
+#if [ -e "$outfile" ]
+#then
+#    echo "Output directory already exists, please remove"
+#    exit 1;
+#fi
 
 
 
@@ -41,3 +41,7 @@ echo "Running with the following arguments: $appParams"
 echo "Arguments passed to Apache Spark: $sparkParams"
 echo -e "\n"
 spark-submit -v ${sparkParams} --class org.biodatageeks.apps.FeatureCounts /tmp/bdg-toolset/bdg-sequila-assembly-${BDG_VERSION}.jar  $appParams
+
+mv $outfile/p*  $outfile_tmp
+rm -rf $outfile
+mv $outfile_tmp $outfile
