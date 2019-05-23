@@ -19,13 +19,12 @@ if case ${sparkParams} in *"${substr}"*) true;; *) false;; esac; then
 
 outfile=`echo $appParams | sed -n "s/^.*-o \([^ ]*\) .*$/\1/p"`
 
-echo "Output " $outfile
 
-#if [ -e "$outfile" ]
-#then
-#    echo "Output already exists, please remove"
-#    exit 1;
-#fi
+if [ -e "$outfile" ]
+then
+    echo "Output already exists, please remove"
+    exit 1;
+fi
 
 
 echo '
@@ -46,9 +45,9 @@ spark-submit ${sparkParams} --class org.biodatageeks.apps.DepthOfCoverage /tmp/b
 
 if [ -e "$outfile" ]
 then
-    mv ${outfile}/part*  ${outfile}_tmp
-    rm -rf $outfile
-    mv ${outfile}_tmp $outfile
+    mv ${outfile}/part*  ${outfile}_tmp;
+    rm -rf $outfile;
+    mv ${outfile}_tmp $outfile;
 fi
 
 
