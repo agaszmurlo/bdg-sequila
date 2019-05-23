@@ -118,6 +118,16 @@ Parameters passed to depthOfCoverage are divided into two parts: equivalent to p
 
       head /data/NA12878.cov.bed
 
+       contigName      start   end     coverage
+       chr1    34      34      1
+       chr1    35      35      2
+       chr1    36      37      3
+       chr1    38      40      4
+       chr1    41      49      5
+       chr1    50      67      6
+       chr1    68      109     7
+       chr1    110     110     6
+       chr1    111     111     5
 
 
 

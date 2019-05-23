@@ -43,8 +43,7 @@ echo "Arguments passed to Apache Spark: $sparkParams"
 echo -e "\n"
 spark-submit ${sparkParams} --class org.biodatageeks.apps.DepthOfCoverage /tmp/bdg-toolset/bdg-sequila-assembly-${BDG_VERSION}.jar  $appParams
 
-if [ -e "$outfile" ]
-then
+if [ -e "$outfile" ]; then
     mv ${outfile}/part*  ${outfile}_tmp;
     rm -rf $outfile;
     mv ${outfile}_tmp $outfile;
