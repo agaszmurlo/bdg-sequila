@@ -163,7 +163,7 @@ If an overlap is identified then the coverage values from the preceding ``partia
 
 .. note::
 
-   The described above algorithm is simplified. In the more general case (specifically when dealing with long reads), which we have implemented in our solution, overlaps may occur between any number of partitions (more than two) and the overlap length can be bigger than partition length. 
+   The described above algorithm is simplified. In the more general case (specifically when dealing with long reads), overlaps may occur between any number of partitions (more than two) and the overlap length can be bigger than partition length. 
 
 
 Implementation and optimizations

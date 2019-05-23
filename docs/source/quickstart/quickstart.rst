@@ -112,8 +112,9 @@ Parameters passed to depthOfCoverage are divided into two parts: equivalent to p
       -e USERID=$UID -e GROUPID=$(id -g) \
       biodatageeks/|project_name|:|version| \
       depthOfCoverage --master local -- \ 
-      --reads /data/NA12878.slice.bam --format blocks \
-      --output /data/NA12878.cov.bed
+      -r /data/NA12878.slice.bam -o /data/NA12878.cov.bed \
+      -f blocks 
+      
 
       head /data/NA12878.cov.bed
 
