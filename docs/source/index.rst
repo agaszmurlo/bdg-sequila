@@ -60,7 +60,7 @@ Docker Hub           `<https://hub.docker.com/r/biodatageeks/|project_name|/>`_
 
 .. rubric:: Release notes:
 
-0.5.5 (2019-05-01)
+0.5.5 (2019-05-22)
  - improved algorithm for long reads support
  - added hadoop-bam support for long reads
  - fixed errors in hadoop-bam caused by not closing IO stream
