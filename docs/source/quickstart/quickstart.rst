@@ -69,6 +69,8 @@ Parameters passed to featureCounts are divided into two parts: equivalent to par
 
 .. code-block:: bash
 
+   mkdir -p /data/sequila
+   
    cd  /data/sequila
 
    wget http://biodatageeks.org/sequila/data/NA12878.slice.bam
@@ -103,6 +105,8 @@ Parameters passed to depthOfCoverage are divided into two parts: equivalent to p
 
 .. code-block:: bash
 
+   mkdir -p /data/sequila
+   
    cd  /data/sequila
 
    wget http://biodatageeks.org/sequila/data/NA12878.slice.bam
@@ -111,7 +115,7 @@ Parameters passed to depthOfCoverage are divided into two parts: equivalent to p
       -v /data/sequila:/data \ 
       -e USERID=$UID -e GROUPID=$(id -g) \
       biodatageeks/|project_name|:|version| \
-      depthOfCoverage --master local -- \ 
+      depthOfCoverage --master local --driver-memory=2g -- \ 
       -r /data/NA12878.slice.bam -o /data/NA12878.cov.bed \
       -f blocks 
       
