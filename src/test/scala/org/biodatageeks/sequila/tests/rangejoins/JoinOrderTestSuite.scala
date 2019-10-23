@@ -22,7 +22,7 @@ class JoinOrderTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAnd
       .textFile(getClass.getResource("/refFlat.txt.bz2").getPath)
       .map(r=>r.split('\t'))
       .map(r=>Row(
-        (r(2).toString),
+        r(2).toString,
         r(4).toInt,
         r(5).toInt
       ))
@@ -33,7 +33,7 @@ class JoinOrderTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAnd
       .textFile(getClass.getResource("/snp150Flagged.txt.bz2").getPath)
       .map(r=>r.split('\t'))
       .map(r=>Row(
-        (r(1).toString),
+        r(1).toString,
         r(2).toInt,
         r(3).toInt
       ))

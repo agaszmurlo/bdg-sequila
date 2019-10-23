@@ -7,9 +7,8 @@ import org.biodatageeks.sequila.rangejoins.IntervalTree.IntervalTreeJoinStrategy
 import org.rogach.scallop.ScallopConf
 import org.seqdoop.hadoop_bam.{BAMInputFormat, SAMRecordWritable}
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
-
 import org.apache.spark.sql.SequilaSession
-import org.biodatageeks.sequila.utils.{SequilaRegister, UDFRegister,InternalParams}
+import org.biodatageeks.sequila.utils.{Columns, InternalParams, SequilaRegister, UDFRegister}
 
 
 
@@ -17,7 +16,7 @@ import org.biodatageeks.sequila.utils.{SequilaRegister, UDFRegister,InternalPara
 
 object DepthOfCoverage {
 
-  case class Region(contigName:String, start:Int, end:Int)
+  case class Region(contig:String, start:Int, end:Int)
 
   class RunConf(args:Array[String]) extends ScallopConf(args){
 
@@ -51,13 +50,13 @@ object DepthOfCoverage {
 
     ss.sql(s"""CREATE TABLE IF NOT EXISTS reads_tmp  USING org.biodatageeks.sequila.datasources.BAM.BAMDataSource  OPTIONS(path '${runConf.reads()}')""")
 
-    val sample = ss.sql(s"SELECT DISTINCT (sampleId) from reads_tmp").first().get(0)
+    val sample = ss.sql(s"SELECT DISTINCT (${Columns.SAMPLE}) from reads_tmp").first().get(0)
 
 
     val query = "SELECT * FROM bdg_coverage('reads_tmp', '%s', '%s')".format(sample, runConf.format())
 
     ss.sql(query)
-      .orderBy("contigName","start")
+      .orderBy(Columns.CONTIG,"start")
       .coalesce(1)
       .write
         .mode("overwrite")

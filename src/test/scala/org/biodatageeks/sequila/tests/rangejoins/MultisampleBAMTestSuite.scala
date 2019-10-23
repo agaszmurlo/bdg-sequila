@@ -6,12 +6,13 @@ import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import org.apache.spark.sql.SequilaSession
 import org.bdgenomics.utils.instrumentation.{Metrics, MetricsListener, RecordedMetrics}
 import org.biodatageeks.sequila.rangejoins.IntervalTree.IntervalTreeJoinStrategyOptim
+import org.biodatageeks.sequila.utils.Columns
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
 class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext {
 
 
-  val bamPath = getClass.getResource("/multisample").getPath+"/*.bam"
+  val bamPath: String = getClass.getResource("/multisample").getPath+"/*.bam"
   val metricsListener = new MetricsListener(new RecordedMetrics())
   val writer = new PrintWriter(new OutputStreamWriter(System.out))
   val tableNameBAM = "reads"
@@ -20,12 +21,12 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
     Metrics.initialize(sc)
     sc.addSparkListener(metricsListener)
     spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(spark) :: Nil
-    spark.sql(s"DROP TABLE IF EXISTS ${tableNameBAM}")
+    spark.sql(s"DROP TABLE IF EXISTS $tableNameBAM")
     spark.sql(
       s"""
-         |CREATE TABLE ${tableNameBAM}
+         |CREATE TABLE $tableNameBAM
          |USING org.biodatageeks.sequila.datasources.BAM.BAMDataSource
-         |OPTIONS(path "${bamPath}")
+         |OPTIONS(path "$bamPath")
          |
       """.stripMargin)
 
@@ -33,28 +34,28 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
 
   test("Multisample BAM Table"){
     assert(spark
-      .sql(s"SELECT * FROM ${tableNameBAM}")
+      .sql(s"SELECT * FROM $tableNameBAM")
       .count === 9516L)
   }
 
   test("Sample name"){
     assert(spark
-      .sql(s"SELECT sampleId FROM ${tableNameBAM} order by sampleId")
+      .sql(s"SELECT ${Columns.SAMPLE} FROM $tableNameBAM order by ${Columns.SAMPLE}")
       .first.getString(0) === "NA12877")
   }
 
   test("Feature counts with multiple samples"){
-    val query ="""SELECT sampleId,count(*),targets.contigName,targets.start,targets.end
+    val query =s"""SELECT ${Columns.SAMPLE}, count(*), targets.${Columns.CONTIG}, targets.${Columns.START}, targets.${Columns.END}
               FROM reads JOIN targets
         |ON (
-        |  targets.contigName=reads.contigName
+        |  targets.${Columns.CONTIG}=reads.${Columns.CONTIG}
         |  AND
-        |  reads.end >= targets.start
+        |  reads.${Columns.END} >= targets.${Columns.START}
         |  AND
-        |  reads.start <= targets.end
+        |  reads.${Columns.START} <= targets.${Columns.END}
         |)
-        |GROUP BY sampleId,targets.contigName,targets.start,targets.end
-        |having contigName='chr1' AND  start=20138 AND  end=20294 and sampleId='NA12878'""".stripMargin
+        |GROUP BY ${Columns.SAMPLE}, targets.${Columns.CONTIG}, targets.${Columns.START}, targets.${Columns.END}
+        |HAVING ${Columns.CONTIG}='chr1' AND  ${Columns.START}=20138 AND  ${Columns.END}=20294 and ${Columns.SAMPLE}='NA12878'""".stripMargin
     val targets = spark
       .sqlContext
       .createDataFrame(Array(Region("chr1", 20138, 20294)))
@@ -66,13 +67,14 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
   test("Multisample groupby - cast issue") {
     val ss = new SequilaSession(spark)
     val query =
-      """
-        |SELECT targets.GeneId as GeneId, targets.contigName as Chr,
-        |targets.Start as Start, targets.End as End, targets.Strand as Strand,
-        |count(*) as Counts FROM targets join reads on
-        |(targets.contigName = reads.contigName  AND CAST(reads.end as Integer) >= CAST(targets.Start as Integer)
-        |AND CAST(reads.start as Integer) <= CAST(targets.End as Integer) )
-        |GROUP BY targets.GeneId, targets.contigName, targets.Start, targets.End, targets.Strand
+      s"""
+        |SELECT targets.GeneId as GeneId, targets.${Columns.CONTIG} as Chr,
+        |targets.${Columns.START} as Start, targets.${Columns.END} as End, targets.${Columns.STRAND} as Strand,
+        |count(*) as Counts
+        |FROM targets JOIN reads on
+        |(targets.${Columns.CONTIG} = reads.${Columns.CONTIG}  AND CAST(reads.${Columns.END} as Integer) >= CAST(targets.${Columns.START} as Integer)
+        |AND CAST(reads.${Columns.START} as Integer) <= CAST(targets.${Columns.END} as Integer) )
+        |GROUP BY targets.GeneId, targets.${Columns.CONTIG}, targets.${Columns.START}, targets.${Columns.END}, targets.${Columns.STRAND}
       """.stripMargin
 
     val targets = ss
@@ -89,8 +91,11 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
   test("Multisample - partition pruning one sample test"){
 
     val query =
-      """
-        |SELECT sampleId,start,cigar FROM reads where sampleId='NA12879' AND contigName='chr1' LIMIT 5
+      s"""
+        |SELECT ${Columns.SAMPLE}, ${Columns.START}, ${Columns.CIGAR}
+        |FROM reads
+        |WHERE ${Columns.SAMPLE}='NA12879' AND ${Columns.CONTIG}='chr1'
+        |LIMIT 5
       """.stripMargin
 
     println(query)
@@ -100,9 +105,12 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
   test("Multisample - partition pruning many samples test"){
 
     val query =
-      """
-        |SELECT sampleId,count(*) FROM reads where sampleId IN('NA12878','NA12879')
-        |GROUP BY sampleId order by sampleId
+      s"""
+        |SELECT ${Columns.SAMPLE}, count(*)
+        |FROM reads
+        |WHERE ${Columns.SAMPLE} IN('NA12878','NA12879')
+        |GROUP BY ${Columns.SAMPLE}
+        |ORDER BY ${Columns.SAMPLE}
       """.stripMargin
 
     //spark.sql(query).explain(true)

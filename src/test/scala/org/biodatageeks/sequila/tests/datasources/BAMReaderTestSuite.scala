@@ -2,10 +2,10 @@ package org.biodatageeks.sequila.tests.datasources
 
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import org.apache.spark.sql.SequilaSession
-import org.biodatageeks.sequila.utils.SequilaRegister
+import org.biodatageeks.sequila.utils.{Columns, SequilaRegister}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
-class BAMBDGReaderTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext{
+class BAMReaderTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext{
 
   val bamPath = getClass.getResource("/NA12878.slice.bam").getPath
   //val bamPath = "/Users/marek/data/NA12878.chrom20.ILLUMINA.bwa.CEU.low_coverage.20121211.bam"
@@ -30,8 +30,8 @@ class BAMBDGReaderTestSuite extends FunSuite with DataFrameSuiteBase with Before
 //    val query =  """
 //                   |SELECT * FROM reads WHERE contigName='20' AND start=59993
 //                 """.stripMargin
-    val query =  """
-                       |SELECT * FROM reads WHERE contigName='chr1' AND start=20138
+    val query =  s"""
+                       |SELECT * FROM reads WHERE ${Columns.CONTIG}='chr1' AND ${Columns.START}=20138
                      """.stripMargin
     val withoutPPDF = ss.sql(query).collect()
 
@@ -49,8 +49,8 @@ class BAMBDGReaderTestSuite extends FunSuite with DataFrameSuiteBase with Before
     val ss = new SequilaSession(spark)
     SequilaRegister.register(ss)
     ss.sqlContext.setConf("spark.biodatageeks.bam.predicatePushdown","false")
-    val query =  """
-                   |SELECT * FROM reads WHERE contigName='chr1' AND start >= 1996 AND end <= 2071
+    val query =  s"""
+                   |SELECT * FROM reads WHERE ${Columns.CONTIG}='chr1' AND ${Columns.START} >= 1996 AND ${Columns.END} <= 2071
                  """.stripMargin
     val withoutPPDF = ss.sql(query).collect()
 

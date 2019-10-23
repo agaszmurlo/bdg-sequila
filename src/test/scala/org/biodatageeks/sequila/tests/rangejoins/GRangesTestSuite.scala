@@ -7,14 +7,12 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 import org.apache.spark.sql.{Row, SequilaSession}
 import org.bdgenomics.utils.instrumentation.{Metrics, MetricsListener, RecordedMetrics}
 import org.biodatageeks.sequila.rangejoins.IntervalTree.IntervalTreeJoinStrategyOptim
-import org.biodatageeks.sequila.utils.{SequilaRegister, UDFRegister}
+import org.biodatageeks.sequila.utils.{Columns, Interval, SequilaRegister, UDFRegister}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
-class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext{
+class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext with Interval{
 
 
-
-  val schema = StructType(Seq(StructField("chr",StringType ),StructField("start",IntegerType ), StructField("end", IntegerType)))
   var ss: SequilaSession = _
   val metricsListener = new MetricsListener(new RecordedMetrics())
   val writer = new PrintWriter(new OutputStreamWriter(System.out))
@@ -30,7 +28,7 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
       .textFile(getClass.getResource("/refFlat.txt.bz2").getPath)
       .map(r=>r.split('\t'))
       .map(r=>Row(
-        (r(2).toString),
+        r(2).toString,
         r(4).toInt,
         r(5).toInt
       ))
@@ -42,7 +40,7 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
       .textFile(getClass.getResource("/snp150Flagged.txt.bz2").getPath)
       .map(r=>r.split('\t'))
       .map(r=>Row(
-        (r(1).toString),
+        r(1).toString,
         r(2).toInt,
         r(3).toInt
       ))
@@ -75,15 +73,15 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
   test("Basic operation - test overlap counts"){
     val query =
       s"""
-         |SELECT snp.*,ref.* FROM snp JOIN ref
-         |ON (ref.chr=snp.chr
-         |AND
-         |snp.end>=ref.start
-         |AND
-         |snp.start<=ref.end
+         |SELECT snp.*,ref.*
+         |FROM snp JOIN ref
+         |ON (ref.${Columns.CONTIG}=snp.${Columns.CONTIG}
+         |AND snp.${Columns.END}>=ref.${Columns.START}
+         |AND snp.${Columns.START}<=ref.${Columns.END}
          |)
          |
        """.stripMargin
+
     ss.sqlContext.setConf("spark.biodatageeks.rangejoin.minOverlap","1")
     ss.sqlContext.setConf("spark.biodatageeks.rangejoin.maxGap","0")
     assert(ss.sql(query).count === 616404L)
@@ -94,14 +92,12 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
     //spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(spark) :: Nil
     val query =
       s"""
-         |SELECT ref.*,snp.* FROM snp JOIN ref
-         |ON (ref.chr=snp.chr
-         |AND
-         |snp.end>=ref.start
-         |AND
-         |snp.start<=ref.end
-         |AND
-         |overlaplength(snp.start,snp.end,ref.start,ref.end)>=10
+         |SELECT ref.*,snp.*
+         |FROM snp JOIN ref
+         |ON (ref.${Columns.CONTIG}=snp.${Columns.CONTIG}
+         |AND snp.${Columns.END}>=ref.${Columns.START}
+         |AND snp.${Columns.START}<=ref.${Columns.END}
+         |AND overlaplength(snp.${Columns.START},snp.${Columns.END},ref.${Columns.START},ref.${Columns.END})>=10
          |)
          |
        """.stripMargin
@@ -115,14 +111,12 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
   test("Basic operation - test overlap counts with min overlap"){
     val query =
       s"""
-         |SELECT ref.*,snp.* FROM snp JOIN ref
-         |ON (ref.chr=snp.chr
-         |AND
-         |snp.end>=ref.start
-         |AND
-         |snp.start<=ref.end
+         |SELECT ref.*,snp.*
+         |FROM snp JOIN ref
+         |ON (ref.${Columns.CONTIG}=snp.${Columns.CONTIG}
+         |AND snp.${Columns.END}>=ref.${Columns.START}
+         |AND snp.${Columns.START}<=ref.${Columns.END}
          |)
-         |
        """.stripMargin
 
     ss.sqlContext.setConf("spark.biodatageeks.rangejoin.minOverlap","10")
@@ -137,12 +131,10 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 //ref.*,snp.*
     val query =
       s"""
-         |SELECT ref.*,snp.chr as chr2, snp.start as start2, snp.end as end2 FROM snp JOIN ref
-         |ON (ref.chr=snp.chr
-         |AND
-         |snp.end>=ref.start
-         |AND
-         |snp.start<=ref.end
+         |SELECT ref.*, snp.${Columns.CONTIG} as chr2, snp.${Columns.START} as start2, snp.${Columns.END} as end2
+         |FROM snp JOIN ref ON (ref.${Columns.CONTIG}=snp.${Columns.CONTIG}
+         |AND snp.${Columns.END}>=ref.${Columns.START}
+         |AND snp.${Columns.START}<=ref.${Columns.END}
          |)
          |
        """.stripMargin
@@ -159,13 +151,11 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
       s"""
          |SELECT * FROM ref a,
          |(SELECT distinct ref.* FROM ref JOIN snp
-         |ON (ref.chr=snp.chr
-         |AND
-         |snp.end>=ref.start
-         |AND
-         |snp.start<=ref.end
+         |ON (ref.${Columns.CONTIG}=snp.${Columns.CONTIG}
+         |AND snp.${Columns.END}>=ref.${Columns.START}
+         |AND snp.${Columns.START}<=ref.${Columns.END}
          |) ) b
-         |WHERE a.chr = b.chr AND a.start=b.start AND a.end = b.end
+         |WHERE a.${Columns.CONTIG} = b.${Columns.CONTIG} AND a.${Columns.START}=b.${Columns.START} AND a.${Columns.END} = b.${Columns.END}
        """.stripMargin
     ss.sqlContext.setConf("spark.biodatageeks.rangejoin.minOverlap","1")
     ss.sqlContext.setConf("spark.biodatageeks.rangejoin.maxGap","0")
@@ -178,9 +168,9 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
     ss.sqlContext.setConf("spark.biodatageeks.rangejoin.maxGap","0")
 
     val query =
-      """
-        |SELECT a.shiftedInterval.start as start_2, a.shiftedInterval.end as end_2
-        |FROM (SELECT chr,start,end,shift(start,end,5) as shiftedInterval FROM ref LIMIT 1) a
+      s"""
+        |SELECT a.shiftedInterval.${Columns.START} as start_2, a.shiftedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END},shift(${Columns.START},${Columns.END},5) as shiftedInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 11878 && ss.sql(query).select("end_2").first().get(0) === 14414)
 
@@ -192,10 +182,10 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
     ss.sqlContext.setConf("maxGap","0")
 
     val query =
-      """
-        |SELECT a.resizedInterval.start as start_2, a.resizedInterval.end as end_2
-        |FROM (SELECT chr,start,end,resize(start,end,5,"center") as resizedInterval FROM ref LIMIT 1) a
-      """.stripMargin
+      s"""
+         |SELECT a.resizedInterval.${Columns.START} as start_2, a.resizedInterval.${Columns.END} as end_2
+         |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END}, resize(${Columns.START},${Columns.END},5,"center") as resizedInterval FROM ref LIMIT 1) a
+            """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 11870 && ss.sql(query).select("end_2").first().get(0) === 14411)
   }
 
@@ -205,10 +195,10 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
     ss.sqlContext.setConf("maxGap","0")
 
     val query =
-      """
-        |SELECT a.resizedInterval.start as start_2, a.resizedInterval.end as end_2
-        |FROM (SELECT chr,start,end,resize(start,end,5,"start") as resizedInterval FROM ref LIMIT 1) a
-      """.stripMargin
+      s"""
+          |SELECT a.resizedInterval.${Columns.START} as start_2, a.resizedInterval.${Columns.END} as end_2
+          |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END}, resize(${Columns.START},${Columns.END},5,"start") as resizedInterval FROM ref LIMIT 1) a
+            """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 11873 && ss.sql(query).select("end_2").first().get(0) === 14414)
   }
 
@@ -219,9 +209,9 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
     ss.sqlContext.setConf("maxGap","0")
 
     val query =
-      """
-        |SELECT a.resizedInterval.start as start_2, a.resizedInterval.end as end_2
-        |FROM (SELECT chr,start,end,resize(start,end,5,"end") as resizedInterval FROM ref LIMIT 1) a
+      s"""
+        |SELECT a.resizedInterval.${Columns.START} as start_2, a.resizedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END}, resize(${Columns.START},${Columns.END},5,"end") as resizedInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 11868 && ss.sql(query).select("end_2").first().get(0) === 14409)
   }
@@ -231,8 +221,8 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.flankedInterval.start as start_2, a.flankedInterval.end as end_2
-        |FROM (SELECT chr,start,end,flank(start,end,5,true,false) as flankedInterval FROM ref LIMIT 1) a
+         |SELECT a.flankedInterval.${Columns.START} as start_2, a.flankedInterval.${Columns.END} as end_2
+         |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END}, flank(${Columns.START},${Columns.END},5,true,false) as flankedInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 11868 && ss.sql(query).select("end_2").first().get(0) === 11872)
   }
@@ -242,9 +232,9 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.flankedInterval.start as start_2, a.flankedInterval.end as end_2
-        |FROM (SELECT chr,start,end,flank(start,end,5,false,false) as flankedInterval FROM ref LIMIT 1) a
-      """.stripMargin
+        |SELECT a.flankedInterval.${Columns.START} as start_2, a.flankedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END}, flank(${Columns.START},${Columns.END},5,false,false) as flankedInterval FROM ref LIMIT 1) a
+        """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 14410 && ss.sql(query).select("end_2").first().get(0) === 14414)
   }
 
@@ -253,8 +243,8 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.flankedInterval.start as start_2, a.flankedInterval.end as end_2
-        |FROM (SELECT chr,start,end,flank(start,end,5,true,true) as flankedInterval FROM ref LIMIT 1) a
+        |SELECT a.flankedInterval.${Columns.START} as start_2, a.flankedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END}, flank(${Columns.START},${Columns.END},5,true,true) as flankedInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 11868 && ss.sql(query).select("end_2").first().get(0) === 11877)
   }
@@ -264,8 +254,8 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.flankedInterval.start as start_2, a.flankedInterval.end as end_2
-        |FROM (SELECT chr,start,end,flank(start,end,5,false,true) as flankedInterval FROM ref LIMIT 1) a
+        |SELECT a.flankedInterval.${Columns.START} as start_2, a.flankedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END}, flank(${Columns.START},${Columns.END},5,false,true) as flankedInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 14405 && ss.sql(query).select("end_2").first().get(0) === 14414)
   }
@@ -275,8 +265,8 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.flankedInterval.start as start_2, a.flankedInterval.end as end_2
-        |FROM (SELECT chr,start,end,flank(start,end,-5,true,false) as flankedInterval FROM ref LIMIT 1) a
+        |SELECT a.flankedInterval.${Columns.START} as start_2, a.flankedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END},flank(${Columns.START},${Columns.END},-5,true,false) as flankedInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 11873 && ss.sql(query).select("end_2").first().get(0) === 11877)
   }
@@ -286,8 +276,8 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.flankedInterval.start as start_2, a.flankedInterval.end as end_2
-        |FROM (SELECT chr,start,end,flank(start,end,-5,false,false) as flankedInterval FROM ref LIMIT 1) a
+        |SELECT a.flankedInterval.${Columns.START} as start_2, a.flankedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END},flank(${Columns.START},${Columns.END},-5,false,false) as flankedInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 14405 && ss.sql(query).select("end_2").first().get(0) === 14409)
   }
@@ -297,8 +287,8 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.flankedInterval.start as start_2, a.flankedInterval.end as end_2
-        |FROM (SELECT chr,start,end,flank(start,end,5,true,true) as flankedInterval FROM ref LIMIT 1) a
+        |SELECT a.flankedInterval.${Columns.START} as start_2, a.flankedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END},flank(${Columns.START},${Columns.END},5,true,true) as flankedInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 11868 && ss.sql(query).select("end_2").first().get(0) === 11877)
   }
@@ -308,8 +298,8 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.flankedInterval.start as start_2, a.flankedInterval.end as end_2
-        |FROM (SELECT chr,start,end,flank(start,end,-5,false,true) as flankedInterval FROM ref LIMIT 1) a
+        |SELECT a.flankedInterval.${Columns.START} as start_2, a.flankedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG},${Columns.START},${Columns.END},flank(${Columns.START},${Columns.END},-5,false,true) as flankedInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 14405 && ss.sql(query).select("end_2").first().get(0) === 14414)
   }
@@ -319,8 +309,8 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.promoterInterval.start as start_2, a.promoterInterval.end as end_2
-        |FROM (SELECT chr, start, end, promoters(start,end,100,20) as promoterInterval FROM ref LIMIT 1) a
+        |SELECT a.promoterInterval.${Columns.START} as start_2, a.promoterInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG}, ${Columns.START}, ${Columns.END}, promoters(${Columns.START},${Columns.END},100,20) as promoterInterval FROM ref LIMIT 1) a
       """.stripMargin
     assert(ss.sql(query).select("start_2").first().get(0) === 11773 && ss.sql(query).select("end_2").first().get(0) === 11892)
   }
@@ -330,8 +320,8 @@ class GRangesTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAf
 
     val query =
       s"""
-        |SELECT a.reflectedInterval.start as start_2, a.reflectedInterval.end as end_2
-        |FROM (SELECT chr, start, end, reflect(start,end,11000,15000) as reflectedInterval FROM ref LIMIT 1) a
+        |SELECT a.reflectedInterval.${Columns.START} as start_2, a.reflectedInterval.${Columns.END} as end_2
+        |FROM (SELECT ${Columns.CONTIG}, ${Columns.START}, ${Columns.END}, reflect(${Columns.START},${Columns.END},11000,15000) as reflectedInterval FROM ref LIMIT 1) a
       """.stripMargin
 
     assert(ss.sql(query).select("start_2").first().get(0) === 11591 && ss.sql(query).select("end_2").first().get(0) === 14127 )

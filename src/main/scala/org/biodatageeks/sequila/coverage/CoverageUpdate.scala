@@ -5,9 +5,9 @@ import org.apache.spark.util.AccumulatorV2
 
 import scala.collection.mutable
 
-case class RightCovEdge(contigName:String,minPos:Int,startPoint:Int,cov:Array[Short], cumSum:Short)
+case class RightCovEdge(contig:String, minPos:Int, startPoint:Int, cov:Array[Short], cumSum:Short)
 
-case class ContigRange(contigName:String, minPos: Int, maxPos:Int)
+case class ContigRange(contig:String, minPos: Int, maxPos:Int)
 
 
 class CovUpdate(var right:ArrayBuffer[RightCovEdge],var left: ArrayBuffer[ContigRange]) extends Serializable {
@@ -19,7 +19,7 @@ class CovUpdate(var right:ArrayBuffer[RightCovEdge],var left: ArrayBuffer[Contig
   def add(p:CovUpdate): CovUpdate = {
     right = right ++ p.right
     left = left ++ p.left
-    return this
+    this
   }
 
 }
@@ -35,15 +35,15 @@ class CoverageAccumulatorV2(var covAcc: CovUpdate) extends AccumulatorV2[CovUpda
     covAcc.add(v)
   }
   def value():CovUpdate = {
-    return covAcc
+    covAcc
   }
   def isZero(): Boolean = {
-    return (covAcc.right.isEmpty && covAcc.left.isEmpty)
+    covAcc.right.isEmpty && covAcc.left.isEmpty
   }
   def copy():CoverageAccumulatorV2 = {
-    return new CoverageAccumulatorV2 (covAcc)
+    new CoverageAccumulatorV2 (covAcc)
   }
-  def merge(other:AccumulatorV2[CovUpdate, CovUpdate]) = {
+  def merge(other:AccumulatorV2[CovUpdate, CovUpdate]): Unit = {
     covAcc.add(other.value)
   }
 }

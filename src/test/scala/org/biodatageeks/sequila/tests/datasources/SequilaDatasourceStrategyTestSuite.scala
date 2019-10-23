@@ -1,7 +1,7 @@
 package org.biodatageeks.sequila.tests.datasources
 
 import org.apache.spark.sql.SequilaSession
-import org.biodatageeks.sequila.utils.SequilaRegister
+import org.biodatageeks.sequila.utils.{Columns, SequilaRegister}
 
 class SequilaDatasourceStrategyTestSuite  extends  BAMBaseTestSuite {
 
@@ -10,12 +10,12 @@ class SequilaDatasourceStrategyTestSuite  extends  BAMBaseTestSuite {
     SequilaRegister.register(ss)
     assert(
       ss
-      .sql(s"SELECT distinct sampleId FROM ${tableNameBAM} LIMIT 10")
+      .sql(s"SELECT distinct ${Columns.SAMPLE} FROM ${tableNameBAM} LIMIT 10")
         .count() === 1)
 
     assert(
       ss
-        .sql(s"SELECT distinct sampleId FROM ${tableNameBAM} LIMIT 10")
+        .sql(s"SELECT distinct ${Columns.SAMPLE} FROM ${tableNameBAM} LIMIT 10")
         .first()
       .getString(0) === "NA12878")
   }
@@ -24,7 +24,7 @@ class SequilaDatasourceStrategyTestSuite  extends  BAMBaseTestSuite {
     val  ss = SequilaSession(spark)
     SequilaRegister.register(ss)
     assert(ss
-      .sql(s"SELECT sampleId,count(*) FROM ${tableNameBAM} group by sampleId")
+      .sql(s"SELECT ${Columns.SAMPLE},count(*) FROM ${tableNameBAM} group by ${Columns.SAMPLE}")
       .first()
       .getLong(1) === 3172)
   }

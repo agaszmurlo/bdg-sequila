@@ -8,8 +8,8 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 import org.seqdoop.hadoop_bam.{BAMInputFormat, SAMRecordWritable}
 
-case class Region(contigName:String,start:Int,end:Int)
-case class Gene(contigName:String,start:Int,end:Int,geneId:String,strand:String)
+case class Region(contig:String, start:Int, end:Int)
+case class Gene(contig:String,start:Int,end:Int,geneId:String,strand:String)
 
 class FeatureCountsTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext{
 
@@ -43,17 +43,18 @@ class FeatureCountsTestSuite extends FunSuite with DataFrameSuiteBase with Befor
       .map(_._2.get)
       .map(r => Region(r.getContig, r.getStart, r.getEnd))
 
+
     val reads = spark
       .sqlContext
       .createDataFrame(alignments)
-    reads
-      .createOrReplaceTempView("reads")
+
+    reads.createOrReplaceTempView("reads")
 
     val targets = spark
       .sqlContext
       .createDataFrame(Array(Region("chr1",20138,20294)))
-    targets
-      .createOrReplaceTempView("targets")
+
+    targets.createOrReplaceTempView("targets")
 
     spark.sql(query).explain(false)
     assert(spark.sql(query).first().getLong(0) === 1484L)

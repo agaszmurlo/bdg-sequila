@@ -5,12 +5,13 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.logical.{LeafNode, Range, Statistics}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
+import org.biodatageeks.sequila.utils.Columns
 
 case class GenomicInterval(
-                          contigName:String,
-                          start:Int,
-                          end:Int,
-                          output: Seq[Attribute]
+                            contig:String,
+                            start:Int,
+                            end:Int,
+                            output: Seq[Attribute]
                           )  extends LeafNode with MultiInstanceRelation with Serializable {
 
   override def newInstance(): GenomicInterval = copy(output = output.map(_.newInstance()))
@@ -21,19 +22,19 @@ case class GenomicInterval(
   }
 
   override def simpleString: String = {
-    s"GenomicInterval ($contigName, $start, $end)"
+    s"GenomicInterval ($contig, $start, $end)"
   }
 
 }
 /** Factory for constructing new `GenomicInterval` nodes. */
 object GenomicInterval {
-  def apply(contigName:String, start: Int, end: Int): GenomicInterval = {
+  def apply(contig:String, start: Int, end: Int): GenomicInterval = {
     val output = StructType(Seq(
-      StructField("contigName", StringType, nullable = false),
-      StructField("start", IntegerType, nullable = false),
-      StructField("end", IntegerType, nullable = false))
+      StructField(s"${Columns.CONTIG}", StringType, nullable = false),
+      StructField(s"${Columns.START}", IntegerType, nullable = false),
+      StructField(s"${Columns.END}", IntegerType, nullable = false))
     )  .toAttributes
-    new GenomicInterval(contigName,start, end, output)
+    new GenomicInterval(contig,start, end, output)
   }
 }
 

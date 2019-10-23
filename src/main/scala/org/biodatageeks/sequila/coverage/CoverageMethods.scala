@@ -11,20 +11,20 @@ import org.apache.log4j.Logger
 
 
 abstract class AbstractCovRecord {
-  def key = (this.contigName+this.start.toString+this.end.toString).hashCode
-  def contigName: String
+  def key = (this.contig+this.start.toString+this.end.toString).hashCode
+  def contig: String
   def start: Int
   def end: Int
   //def cov: T
 }
 
 
-case class CovRecord(contigName:String, start:Int,end:Int, cov:Short)
+case class CovRecord(contig:String, start:Int, end:Int, cov:Short)
   extends AbstractCovRecord
 
 
 //for various coverage windows operations
-case class CovRecordWindow(contigName:String, start:Int,end:Int, cov:Float, overLap:Option[Int] = None)
+case class CovRecordWindow(contig:String, start:Int, end:Int, cov:Float, overLap:Option[Int] = None)
 extends AbstractCovRecord
 
 object CoverageMethodsMos {

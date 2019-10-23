@@ -22,7 +22,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 import org.apache.spark.rdd.PairRDDFunctions
 import org.biodatageeks.sequila.outputformats.BAMOutputFormat
-import org.biodatageeks.sequila.utils.{FastSerializer, InternalParams, BDGTableFuncs}
+import org.biodatageeks.sequila.utils.{Columns, FastSerializer, InternalParams, TableFuncs}
 import org.nustaq.serialization.FSTConfiguration
 
 
@@ -47,17 +47,17 @@ trait BDGAlignFileReaderWriter [T <: BDGAlignInputFormat]{
   //val serializer = new BDGFastSerializer()
   val confMap = new mutable.HashMap[String,String]()
   val columnNames = Array(
-    "sampleId",
-    "contigName",
-    "start",
-    "end",
-    "cigar",
-    "mapq",
-    "baseq",
-    "sequence",
-    "flags",
-    "materefind",
-    "SAMRecord"
+    Columns.SAMPLE,
+    Columns.CONTIG,
+    Columns.START,
+    Columns.END,
+    Columns.CIGAR,
+    Columns.MAPQ,
+    Columns.BASEQ,
+    Columns.SEQUENCE,
+    Columns.FLAGS,
+    Columns.MATEREFIND,
+    Columns.SAMRECORD
   )
 
   def setLocalConf(@transient sqlContext: SQLContext) = {
@@ -120,8 +120,8 @@ trait BDGAlignFileReaderWriter [T <: BDGAlignInputFormat]{
 
     val spark = sqlContext
       .sparkSession
-    val resolvedPath = BDGTableFuncs.getExactSamplePath(spark,path)
-//    val folderPath = BDGTableFuncs.getParentFolderPath(spark,path)
+    val resolvedPath = TableFuncs.getExactSamplePath(spark,path)
+//    val folderPath = TableFuncs.getParentFolderPath(spark,path)
     logger.info(s"######## Reading ${resolvedPath} or ${path}")
     val alignReadMethod = spark.sqlContext.getConf(InternalParams.IOReadAlignmentMethod,"hadoopBAM").toLowerCase
     logger.info(s"######## Using ${alignReadMethod} for reading alignment files.")
@@ -173,7 +173,7 @@ trait BDGAlignFileReaderWriter [T <: BDGAlignInputFormat]{
 
   def readBAMFileToBAMBDGRecord(@transient sqlContext: SQLContext, path: String,
                                 requiredColumns:Array[String])
-                               (implicit c: ClassTag[T]) = {
+                               (implicit c: ClassTag[T]): RDD[Row] = {
 
 
     setLocalConf(sqlContext)
@@ -456,7 +456,7 @@ class BDGAlignmentRelation[T <:BDGAlignInputFormat](path:String, refPath:Option[
   def buildScanSampleId = {
     spark
       .sparkContext
-      .parallelize(BDGTableFuncs.getAllSamples(spark,path))
+      .parallelize(TableFuncs.getAllSamples(spark,path))
       .map(r=>Row.fromSeq(Seq(r)) )
   }
 
@@ -496,8 +496,8 @@ class BDGAlignmentRelation[T <:BDGAlignInputFormat](path:String, refPath:Option[
           p.map( r => bdgSerializer.fst.asObject(r.SAMRecord.get).asInstanceOf[SAMRecord] )
         })
 
-    val samplePath = s"${BDGTableFuncs.getTableDirectory(spark,srcTable)}/${sampleName}*.bam"
-    val headerPath = BDGTableFuncs.getExactSamplePath(spark,samplePath)
+    val samplePath = s"${TableFuncs.getTableDirectory(spark,srcTable)}/${sampleName}*.bam"
+    val headerPath = TableFuncs.getExactSamplePath(spark,samplePath)
     saveAsBAMFile(spark.sqlContext,srcBAMRDD,outPathString,headerPath)
   }
 

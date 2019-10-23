@@ -92,7 +92,7 @@ class CoverageTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndA
       val windowLength = 100
       val bdg = session.sql(s"SELECT * FROM bdg_coverage('${tableNameMultiBAM}','NA12878', 'blocks', '${windowLength}')")
 
-//      bdg.printSchema()
+      bdg.printSchema()
       assert(bdg.count == 267)
       assert(bdg.first().getInt(1) % windowLength == 0) // check for fixed window start position
       assert(bdg.first().getInt(2) % windowLength == windowLength - 1) // // check for fixed window end position

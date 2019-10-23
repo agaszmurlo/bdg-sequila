@@ -4,7 +4,7 @@ import htsjdk.samtools.SAMRecord
 import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession}
 import org.apache.spark.sql.sources._
-import org.biodatageeks.sequila.utils.{FastSerializer, InternalParams, BDGTableFuncs}
+import org.biodatageeks.sequila.utils.{FastSerializer, InternalParams, TableFuncs}
 import org.seqdoop.hadoop_bam.BAMBDGInputFormat
 
 
@@ -60,7 +60,7 @@ class BAMDataSource extends DataSourceRegister
         val bdgSerializer = new FastSerializer()
         p.map( r => bdgSerializer.fst.asObject(r.SAMRecord.get).asInstanceOf[SAMRecord] )
       })
-    val headerPath = BDGTableFuncs.getExactSamplePath(spark,samplePath)
+    val headerPath = TableFuncs.getExactSamplePath(spark,samplePath)
     saveAsBAMFile(spark.sqlContext,srcBAMRDD,outPathString,headerPath)
   }
 

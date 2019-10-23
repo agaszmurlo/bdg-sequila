@@ -1,8 +1,10 @@
 package org.biodatageeks.sequila.datasources.VCF
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.sql.sources._
+import org.biodatageeks.sequila.utils.Columns
 
 
 class VCFRelation(path: String)(@transient val sqlContext: SQLContext) extends BaseRelation
@@ -10,15 +12,15 @@ class VCFRelation(path: String)(@transient val sqlContext: SQLContext) extends B
   with Serializable
   with Logging{
 
-  val spark = sqlContext.sparkSession
+  val spark: SparkSession = sqlContext.sparkSession
 
 
-  lazy val df =  spark.read
+  lazy val df: DataFrame =  spark.read
     .format("com.lifeomic.variants")
     .option("use.format.type", "false")
     .load(path)
-    .withColumnRenamed("sampleid","sample_id")
-    .withColumnRenamed("chrom", "contig")
+    .withColumnRenamed("sampleid", Columns.SAMPLE)
+    .withColumnRenamed("chrom", Columns.CONTIG)
 
 
 
@@ -27,7 +29,7 @@ class VCFRelation(path: String)(@transient val sqlContext: SQLContext) extends B
    df.schema
   }
 
-  override def buildScan(requiredColumns: Array[String] ) = {
+  override def buildScan(requiredColumns: Array[String] ): RDD[Row] = {
 
     {
       if (requiredColumns.length > 0)

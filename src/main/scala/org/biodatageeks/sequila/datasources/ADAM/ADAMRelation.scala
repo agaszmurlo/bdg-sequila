@@ -17,6 +17,7 @@ class ADAMRelation (path:String)(@transient val sqlContext: SQLContext)
   override def schema: org.apache.spark.sql.types.StructType = parquet.schema
 
   override def buildScan(requiredColumns: Array[String],  filters: Array[Filter]): RDD[Row] = {
+
     requiredColumns.foreach(println(_))
     parquet
       .select(requiredColumns.map(col): _*)
@@ -24,3 +25,4 @@ class ADAMRelation (path:String)(@transient val sqlContext: SQLContext)
   }
 
 }
+

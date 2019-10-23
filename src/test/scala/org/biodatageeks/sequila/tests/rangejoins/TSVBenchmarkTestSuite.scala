@@ -9,6 +9,7 @@ import org.bdgenomics.utils.instrumentation.{Metrics, MetricsListener, RecordedM
 import org.biodatageeks.sequila.rangejoins.IntervalTree.IntervalTreeJoinStrategyOptim
 import org.biodatageeks.sequila.rangejoins.NCList.NCListsJoinStrategy
 import org.biodatageeks.sequila.rangejoins.genApp.IntervalTreeJoinStrategy
+import org.biodatageeks.sequila.utils.Columns
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
 
@@ -21,18 +22,16 @@ class TSVBenchmarkTestSuite extends FunSuite with DataFrameSuiteBase with Before
     ret
   }
 
-  val schema = StructType(Seq(StructField("contigName",StringType ),StructField("start",IntegerType ), StructField("end", IntegerType)))
+  val schema = StructType(Seq(StructField(s"${Columns.CONTIG}",StringType ),StructField(s"${Columns.START}",IntegerType ), StructField(s"${Columns.END}", IntegerType)))
 
   val query: String = s"""
-SELECT * FROM snp JOIN ref
-ON (ref.contigName=snp.contigName
-AND
-CAST(snp.end AS INTEGER)>=CAST(ref.start AS INTEGER)
-AND
-CAST(snp.start AS INTEGER)<=CAST(ref.end AS INTEGER)
-)
-
-       """.stripMargin
+      | SELECT * FROM snp JOIN ref
+      | ON (ref.${Columns.CONTIG}=snp.${Columns.CONTIG}
+      | AND
+      | CAST(snp.${Columns.END} AS INTEGER)>=CAST(ref.${Columns.START} AS INTEGER)
+      | AND
+      | CAST(snp.${Columns.START} AS INTEGER)<=CAST(ref.${Columns.END} AS INTEGER)
+)""".stripMargin
 
   val metricsListener = new MetricsListener(new RecordedMetrics())
   val writer = new PrintWriter(new OutputStreamWriter(System.out))
