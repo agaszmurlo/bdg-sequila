@@ -30,7 +30,6 @@ class CovUpdate(var right: ArrayBuffer[RightCovEdge],
 
 class CoverageAccumulatorV2(var covAcc: CovUpdate)
     extends AccumulatorV2[CovUpdate, CovUpdate] {
-  //private val covAcc = new CovUpdate(new ArrayBuffer[RightCovEdge](),new ArrayBuffer[ContigRange]())
 
   def reset(): Unit = {
     covAcc = new CovUpdate(new ArrayBuffer[RightCovEdge](),

@@ -1,34 +1,40 @@
-package org.biodatageeks.sequila.tests
+package org.biodatageeks.sequila.tests.datasources
 
 import java.io.{OutputStreamWriter, PrintWriter}
 
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
-import org.bdgenomics.utils.instrumentation.{Metrics, MetricsListener, RecordedMetrics}
+import org.bdgenomics.utils.instrumentation.{
+  Metrics,
+  MetricsListener,
+  RecordedMetrics
+}
 import org.biodatageeks.sequila.rangejoins.IntervalTree.IntervalTreeJoinStrategyOptim
 import org.biodatageeks.sequila.rangejoins.NCList.NCListsJoinStrategy
 import org.biodatageeks.sequila.rangejoins.genApp.IntervalTreeJoinStrategy
+import org.biodatageeks.sequila.utils.Columns
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
+class ADAMBenchmarkTestSuite
+    extends FunSuite
+    with DataFrameSuiteBase
+    with BeforeAndAfter
+    with SharedSparkContext {
 
-class ADAMBenchmarkTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext {
-
-  def time[A](f: => A) = {
+  def time[A](f: => A): A = {
     val s = System.nanoTime
     val ret = f
     println("time: " + (System.nanoTime - s) / 1e9 + " seconds")
     ret
   }
-  val query = (
-    s"""
-       |SELECT * FROM snp JOIN ref
-       |ON (ref.contigName=snp.contigName
-       |AND
-       |CAST(snp.end AS INTEGER)>=CAST(ref.start AS INTEGER)
-       |AND
-       |CAST(snp.start AS INTEGER)<=CAST(ref.end AS INTEGER)
-       |)
-       |
-       """).stripMargin
+  val query: String = s"""
+     | SELECT * FROM snp JOIN ref
+     | ON (ref.${Columns.CONTIG} = snp.${Columns.CONTIG}
+     | AND
+     | CAST(snp.${Columns.END} AS INTEGER) >= CAST(ref.${Columns.START} AS INTEGER)
+     | AND
+     | CAST(snp.${Columns.START} AS INTEGER) <= CAST(ref.${Columns.END} AS INTEGER)
+     |)
+     """.stripMargin
 
   val metricsListener = new MetricsListener(new RecordedMetrics())
   val writer = new PrintWriter(new OutputStreamWriter(System.out))
@@ -36,86 +42,98 @@ class ADAMBenchmarkTestSuite extends FunSuite with DataFrameSuiteBase with Befor
   before {
     System.setSecurityManager(null)
     //spark.sparkContext.setLogLevel("INFO")
-    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(spark) :: Nil
-    spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxBroadcastSize", (5*1024*1024).toString)
-    val ref = spark.read.parquet(getClass.getResource("/refFlat.adam").getPath)
-    ref.createOrReplaceTempView("ref")
-    time(println(ref.count))
+    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(
+      spark) :: Nil
+    spark.sqlContext.setConf("spark.biodatageeks.rangejoin.maxBroadcastSize",
+                             (5 * 1024 * 1024).toString)
 
-    val snp = spark.read.parquet(getClass.getResource("/snp150Flagged.adam").getPath)
-    snp.createOrReplaceTempView("snp")
-    time(println(snp.count))
+    val tableRef = "ref"
+    val refPath = getClass.getResource("/refFlat.adam").getPath
+    spark.sql(s"DROP TABLE IF EXISTS $tableRef")
+    spark.sql(s"""
+                 |CREATE TABLE $tableRef
+                 |USING org.biodatageeks.sequila.datasources.ADAM.ADAMDataSource
+                 |OPTIONS(path "$refPath")
+                 |
+      """.stripMargin)
 
+//    val ref = spark.read.parquet(getClass.getResource("/refFlat.adam").getPath)
+//    ref.createOrReplaceTempView("ref")
+//    ref.columns.foreach(println(_))
+
+//    val snp =
+//      spark.read.parquet(getClass.getResource("/snp150Flagged.adam").getPath)
+//    snp.createOrReplaceTempView("snp")
+
+    val tableSnp = "snp"
+    val snpPath = getClass.getResource("/snp150Flagged.adam").getPath
+    spark.sql(s"DROP TABLE IF EXISTS $tableSnp")
+    spark.sql(s"""
+                 |CREATE TABLE $tableSnp
+                 |USING org.biodatageeks.sequila.datasources.ADAM.ADAMDataSource
+                 |OPTIONS(path "$snpPath")
+                 |
+      """.stripMargin)
+
+    spark.sql(s"""select * from $tableSnp limit 1""").show()
     Metrics.initialize(sc)
 
     sc.addSparkListener(metricsListener)
 
-
   }
 
-  test ("Join using bgd-spark-granges - broadcast"){
+  test("Join using bgd-spark-granges - broadcast") {
 
     val stageMetrics = ch.cern.sparkmeasure.StageMetrics(spark)
 
-    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(spark) :: Nil
-    time(assert(stageMetrics.runAndMeasure(spark.sqlContext.sql(query).count) === 616404L))
+    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(
+      spark) :: Nil
+    time(
+      assert(stageMetrics
+        .runAndMeasure(spark.sqlContext.sql(query).count) === 616404L))
 
   }
 
-  test ("Join using bgd-spark-granges - twophase"){
+  test("Join using bgd-spark-granges - twophase") {
     val stageMetrics = ch.cern.sparkmeasure.StageMetrics(spark)
-    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(spark) :: Nil
-    sqlContext.setConf("spark.biodatageeks.rangejoin.maxBroadcastSize", (1024*1024).toString)
-    time(assert(stageMetrics.runAndMeasure(spark.sqlContext.sql(query).count) === 616404L))
+    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(
+      spark) :: Nil
+    sqlContext.setConf("spark.biodatageeks.rangejoin.maxBroadcastSize",
+                       (1024 * 1024).toString)
+    time(
+      assert(stageMetrics
+        .runAndMeasure(spark.sqlContext.sql(query).count) === 616404L))
     val a = stageMetrics.createStageMetricsDF()
-    val b= a
-      .drop("jobId","stageId","name","submissionTime", "completionTime")
+    val b = a
+      .drop("jobId", "stageId", "name", "submissionTime", "completionTime")
       .groupBy()
       .sum()
 
-
-    b.select("sum(executorRunTime)","sum(executorCpuTime)","sum(shuffleTotalBytesRead)","sum(shuffleBytesWritten)")
-      .show(100,false)
+    b.select("sum(executorRunTime)",
+              "sum(executorCpuTime)",
+              "sum(shuffleTotalBytesRead)",
+              "sum(shuffleBytesWritten)")
+      .show(100, truncate = false)
   }
 
-  test ("Join using bgd-spark-granges NCList"){
+  test("Join using bgd-spark-granges NCList") {
     spark.experimental.extraStrategies = new NCListsJoinStrategy(spark) :: Nil
     time(assert(spark.sqlContext.sql(query).count === 616404L))
   }
 
-  test ("Join using builtin spark algo"){
+  test("Join using builtin spark algo") {
 
-    spark.experimental.extraStrategies =  Nil
+    spark.experimental.extraStrategies = Nil
     time(assert(spark.sqlContext.sql(query).count === 616404L))
   }
 
-  test ("Join using builtin genapp"){
+  test("Join using builtin genapp") {
 
-    spark.experimental.extraStrategies =  new IntervalTreeJoinStrategy(spark) :: Nil
+    spark.experimental.extraStrategies = new IntervalTreeJoinStrategy(spark) :: Nil
     time(assert(spark.sqlContext.sql(query).count === 616404L))
   }
-//
-//  test("Join using ADAM broadcast join"){
-//
-//    val featuresRef = sc.loadFeatures(getClass.getResource("/refFlat.adam").getPath)
-//    val featuresSnp = sc.loadFeatures (getClass.getResource("/snp150Flagged.adam").getPath)
-//    val stageMetrics = ch.cern.sparkmeasure.StageMetrics(spark)
-//    val res = featuresRef.broadcastRegionJoin(featuresSnp)
-//    time(println(stageMetrics.runAndMeasure(res.rdd.count() ) ) )
-//    //time(println(res.rdd.count()))
-//  }
-//
-//  test("Join using ADAM shuffle join"){
-//
-//    val featuresRef = sc.loadFeatures(getClass.getResource("/refFlat.adam").getPath)
-//    val featuresSnp = sc.loadFeatures (getClass.getResource("/snp150Flagged.adam").getPath)
-//    val res = featuresRef.shuffleRegionJoin(featuresSnp)
-//    //time(res.rdd.collect().size)
-//    time(res.rdd.count())
-//  }
 
-
-  after{
+  after {
 
     //Metrics.print(writer, Some(metricsListener.metrics.sparkMetrics.stageTimes))
     writer.flush()

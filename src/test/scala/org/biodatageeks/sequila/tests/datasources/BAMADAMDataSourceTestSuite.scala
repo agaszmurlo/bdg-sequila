@@ -3,13 +3,20 @@ package org.biodatageeks.sequila.tests.datasources
 import java.io.{OutputStreamWriter, PrintWriter}
 
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
-import org.bdgenomics.utils.instrumentation.{Metrics, MetricsListener, RecordedMetrics}
+import org.bdgenomics.utils.instrumentation.{
+  Metrics,
+  MetricsListener,
+  RecordedMetrics
+}
 import org.biodatageeks.sequila.tests.rangejoins.Region
 import org.biodatageeks.sequila.utils.{Columns, InternalParams}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
-class BAMADAMDataSourceTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext{
-
+class BAMADAMDataSourceTestSuite
+    extends FunSuite
+    with DataFrameSuiteBase
+    with BeforeAndAfter
+    with SharedSparkContext {
 
   val bamPath: String = getClass.getResource("/NA12878.slice.bam").getPath
   val adamPath: String = getClass.getResource("/NA12878.slice.adam").getPath
@@ -20,13 +27,12 @@ class BAMADAMDataSourceTestSuite extends FunSuite with DataFrameSuiteBase with B
   val tableNameBAM = "reads"
   val tableNameADAM = "readsADAM"
   val tableNameCRAM = "readsCRAM"
-  before{
+  before {
 
     Metrics.initialize(sc)
     sc.addSparkListener(metricsListener)
     spark.sql(s"DROP TABLE IF EXISTS $tableNameBAM")
-    spark.sql(
-      s"""
+    spark.sql(s"""
          |CREATE TABLE $tableNameBAM
          |USING org.biodatageeks.sequila.datasources.BAM.BAMDataSource
          |OPTIONS(path "$bamPath")
@@ -34,8 +40,7 @@ class BAMADAMDataSourceTestSuite extends FunSuite with DataFrameSuiteBase with B
       """.stripMargin)
 
     spark.sql(s"DROP TABLE IF EXISTS $tableNameCRAM")
-    spark.sql(
-      s"""
+    spark.sql(s"""
          |CREATE TABLE $tableNameCRAM
          |USING org.biodatageeks.sequila.datasources.BAM.CRAMDataSource
          |OPTIONS(path "$cramPath", refPath "$refPath")
@@ -43,75 +48,87 @@ class BAMADAMDataSourceTestSuite extends FunSuite with DataFrameSuiteBase with B
       """.stripMargin)
 
     spark.sql(s"DROP TABLE IF EXISTS $tableNameADAM")
-    spark.sql(
-      s"""
+    spark.sql(s"""
          |CREATE TABLE $tableNameADAM
          |USING org.biodatageeks.sequila.datasources.ADAM.ADAMDataSource
          |OPTIONS(path "$adamPath")
          |
       """.stripMargin)
 
-
   }
-  test("BAM - Row count BAMDataSource"){
-    assert(spark
-      .sql(s"SELECT * FROM $tableNameBAM")
-      .count === 3172L)
+  test("BAM - Row count BAMDataSource") {
+    assert(
+      spark
+        .sql(s"SELECT * FROM $tableNameBAM")
+        .count === 3172L)
   }
 
-  test("BAM - select limit" ){
+  test("BAM - select limit") {
 
     spark
-      .sql(s"SELECT ${Columns.CONTIG}, ${Columns.START}, ${Columns.END} FROM $tableNameBAM limit 1").show()
+      .sql(
+        s"SELECT ${Columns.CONTIG}, ${Columns.START}, ${Columns.END} FROM $tableNameBAM limit 1")
+      .show()
   }
 
-  test("BAM - select * limit - skipping SAMRecord" ){
+  test("BAM - select * limit - skipping SAMRecord") {
 
-    assert(spark
-      .sql(s"SELECT ${Columns.SAMRECORD} FROM $tableNameBAM limit 1").first().get(0) === null)
+    assert(
+      spark
+        .sql(s"SELECT ${Columns.SAMRECORD} FROM $tableNameBAM limit 1")
+        .first()
+        .get(0) === null)
 
-   sqlContext.setConf(InternalParams.BAMCTASCmd,"true")
+    sqlContext.setConf(InternalParams.BAMCTASCmd, "true")
 
-    assert(spark
-      .sql(s"SELECT ${Columns.SAMRECORD} FROM $tableNameBAM limit 1").first().get(0) != null)
-    sqlContext.setConf(InternalParams.BAMCTASCmd,"false")
+    assert(
+      spark
+        .sql(s"SELECT ${Columns.SAMRECORD} FROM $tableNameBAM limit 1")
+        .first()
+        .get(0) != null)
+    sqlContext.setConf(InternalParams.BAMCTASCmd, "false")
   }
 
-  test("BAM - Row count ADAMDataSource2"){
+  test("BAM - Row count ADAMDataSource2") {
+    assert(
+      spark
+        .sql(s"SELECT * FROM $tableNameADAM")
+        .count === 3172L)
+  }
+
+  test("CRAM - select limit") {
+
     spark
-      .sql(s"SELECT ${Columns.CONTIG}, ${Columns.START}, ${Columns.END} FROM $tableNameADAM").show(1)
-      //.count === 3172L)
+      .sql(
+        s"SELECT ${Columns.CONTIG}, ${Columns.START}, ${Columns.END}, ${Columns.CIGAR} FROM $tableNameCRAM")
+      .show(10)
   }
 
-  test("CRAM - select limit" ){
+  test("CRAM - select count") {
 
-    spark
-      .sql(s"SELECT ${Columns.CONTIG}, ${Columns.START}, ${Columns.END}, ${Columns.CIGAR} FROM $tableNameCRAM").show(10)
+    assert(
+      spark
+        .sql(s"SELECT * FROM $tableNameCRAM")
+        .count() == 3172L)
   }
 
-  test("CRAM - select count" ){
-
-    assert(spark
-      .sql(s"SELECT * FROM $tableNameCRAM").count() == 3172L )
+  test("ADAM - Row count BAMDataSource") {
+    assert(
+      spark
+        .sql(s"SELECT * FROM $tableNameADAM")
+        .count === 3172L)
   }
 
-
-  test("ADAM - Row count BAMDataSource"){
-    assert(spark
-      .sql(s"SELECT * FROM $tableNameADAM")
-      .count === 3172L)
-  }
-
-  test("IntervalTree strategy over BAMDataSource"){
-    val targets = spark
-      .sqlContext
-      .createDataFrame(Array(Region("chr1",20138,20294)))
+  test("IntervalTree strategy over BAMDataSource") {
+    val targets = spark.sqlContext
+      .createDataFrame(Array(Region("chr1", 20138, 20294)))
     targets
       .createOrReplaceTempView("targets")
-    val query =s"""SELECT count(*),targets.${Columns.CONTIG},targets.${Columns.START},targets.${Columns.END}
-              FROM ${tableNameBAM} reads JOIN targets
+    val query =
+      s"""SELECT count(*),targets.${Columns.CONTIG},targets.${Columns.START},targets.${Columns.END}
+              FROM $tableNameBAM reads JOIN targets
         |ON (
-        |  targets.${Columns.CONTIG}=reads.${Columns.CONTIG}
+        |  targets.${Columns.CONTIG} = reads.${Columns.CONTIG}
         |  AND
         |  reads.${Columns.END} >= targets.${Columns.START}
         |  AND
@@ -124,29 +141,33 @@ class BAMADAMDataSourceTestSuite extends FunSuite with DataFrameSuiteBase with B
       .sql(query)
       .explain(false)
     spark.sql(query).show()
-   // assert(spark.sql(query).first().getLong(0) === 1484L)
+    assert(spark.sql(query).first().getLong(0) === 1484L)
 
   }
 
-  test("BAM - coverage BAMDataSource"){
-    assert(spark
-      .sql(s"SELECT * FROM $tableNameBAM")
-      .count === 3172L)
+  test("BAM - coverage BAMDataSource") {
+    assert(
+      spark
+        .sql(s"SELECT * FROM $tableNameBAM")
+        .count === 3172L)
   }
 
-  test("BAM - select only sampleId"){
-    assert(spark
-      .sql(s"SELECT distinct ${Columns.SAMPLE} FROM $tableNameBAM order by ${Columns.SAMPLE}")
-      .first().getString(0) == "NA12878")
+  test("BAM - select only sampleId") {
+    assert(
+      spark
+        .sql(
+          s"SELECT distinct ${Columns.SAMPLE} FROM $tableNameBAM order by ${Columns.SAMPLE}")
+        .first()
+        .getString(0) == "NA12878")
   }
 
-  test("BAM - select only bases"){
+  test("BAM - select only bases") {
     spark
       .sql(s"SELECT ${Columns.SEQUENCE} FROM $tableNameBAM limit 5")
       .show()
   }
 
-  after{
+  after {
     spark.sql(s"DROP TABLE IF EXISTS  $tableNameBAM")
     writer.flush()
     Metrics.stopRecording()
