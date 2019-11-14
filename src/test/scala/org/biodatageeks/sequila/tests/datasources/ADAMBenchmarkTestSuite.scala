@@ -57,14 +57,6 @@ class ADAMBenchmarkTestSuite
                  |
       """.stripMargin)
 
-//    val ref = spark.read.parquet(getClass.getResource("/refFlat.adam").getPath)
-//    ref.createOrReplaceTempView("ref")
-//    ref.columns.foreach(println(_))
-
-//    val snp =
-//      spark.read.parquet(getClass.getResource("/snp150Flagged.adam").getPath)
-//    snp.createOrReplaceTempView("snp")
-
     val tableSnp = "snp"
     val snpPath = getClass.getResource("/snp150Flagged.adam").getPath
     spark.sql(s"DROP TABLE IF EXISTS $tableSnp")
