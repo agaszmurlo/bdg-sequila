@@ -26,22 +26,20 @@ class CoverageStrategy(spark: SparkSession) extends Strategy with Serializable  
 
     //add support for CRAM
 
-    case BDGCoverage(tableName,sampleId,result,target,output) => {
+    case BDGCoverage(tableName,sampleId,result,target,output) =>
       val inputFormat = TableFuncs
         .getTableMetadata(spark, tableName)
         .provider
       inputFormat match {
-        case Some(f) => {
+        case Some(f) =>
 
           if (f == InputDataType.BAMInputDataType)
             BDGCoveragePlan[BAMBDGInputFormat](plan, spark, tableName, sampleId,result,target, output) :: Nil
           else if (f == InputDataType.CRAMInputDataType)
             BDGCoveragePlan[CRAMBDGInputFormat](plan, spark, tableName, sampleId, result,target, output) :: Nil
           else Nil
-        }
         case None => throw new Exception("Only BAM and CRAM file formats are supported in bdg_coverage.")
       }
-    }
 
     case _ => Nil
   }
@@ -50,7 +48,7 @@ class CoverageStrategy(spark: SparkSession) extends Strategy with Serializable  
 
 case class UpdateStruct(
                          upd:mutable.HashMap[(String,Int),(Option[Array[Short]],Short)],
-                         shrink:mutable.HashMap[(String,Int),(Int)],
+                         shrink:mutable.HashMap[(String,Int), Int],
                          minmax:mutable.HashMap[String,(Int,Int)]
                        )
 
@@ -68,24 +66,23 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
     spark
       .sparkContext
       .getPersistentRDDs
-      .filter((t)=> t._2.name==InternalParams.RDDEventsName)
+      .filter(t=> t._2.name==InternalParams.RDDEventsName)
       .foreach(_._2.unpersist())
 
     val schema = plan.schema
     val sampleTable = TableFuncs
       .getTableMetadata(spark,table)
     val fileExtension = sampleTable.provider match{
-      case Some(f) => {
+      case Some(f) =>
         if (f == InputDataType.BAMInputDataType) "bam"
         else if (f == InputDataType.CRAMInputDataType) "cram"
         else throw new Exception("Only BAM and CRAM file formats are supported in bdg_coverage.")
-      }
       case None => throw new Exception("Wrong file extension - only BAM and CRAM file formats are supported in bdg_coverage.")
     }
     val samplePath = (sampleTable
       .location.toString
       .split('/')
-      .dropRight(1) ++ Array(s"${sampleId}*.${fileExtension}"))
+      .dropRight(1) ++ Array(s"$sampleId*.$fileExtension"))
       .mkString("/")
 
     val refPath = sqlContext
@@ -93,7 +90,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
       .hadoopConfiguration
       .get(CRAMBDGInputFormat.REFERENCE_SOURCE_PATH_PROPERTY)
     val logger =  Logger.getLogger(this.getClass.getCanonicalName)
-      logger.info(s"Processing ${samplePath} with reference: ${refPath}")
+      logger.info(s"Processing $samplePath with reference: $refPath")
     lazy val alignments = readBAMFile(spark.sqlContext, samplePath, if( refPath == null || refPath.length == 0) None else Some(refPath))
 
     val filterFlag = spark.conf.get(InternalParams.filterReadsByFlag, "1796").toInt
@@ -121,7 +118,8 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
           val left = ContigRange(contigName, minPos, maxPos)
           val cu = new CovUpdate(ArrayBuffer(right), ArrayBuffer(left))
           val loggerIN =  Logger.getLogger(this.getClass.getCanonicalName)
-          loggerIN.debug(s"#### CoverageAccumulator Adding partition record for: chr:=${contigName},start=${minPos},end=${maxPos},span=${maxPos - minPos + 1}, max cigar length: $maxCigarLength")
+          loggerIN.debug(s"#### CoverageAccumulator Adding partition record for: chr:=$contigName,start=$minPos,end=$maxPos,span=${maxPos - minPos + 1}, max cigar length: $maxCigarLength")
+
           acc.add(cu)
         }
       }
@@ -134,7 +132,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
       val contigRanges = a.left
       val updateArray = a.right
       val updateMap = new mutable.HashMap[(String, Int), (Option[Array[Short]], Short)]()
-      val shrinkMap = new mutable.HashMap[(String, Int), (Int)]()
+      val shrinkMap = new mutable.HashMap[(String, Int), Int]()
       val minmax = new mutable.HashMap[String, (Int, Int)]()
 //      val updateArraySplit = new ArrayBuffer[RightCovEdge]()
 
@@ -154,8 +152,8 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
           if (!minmax.contains(contig))
             minmax += contig -> (Int.MaxValue, 0)
           val filterUpd =  updateArray
-              .sortBy(r=>(r.contig,r.minPos))
-            .filter(f => (f.contig == contig && f.startPoint + f.cov.length > c.minPos) && f.minPos < c.minPos) // updates for overlaps
+            .filter(f => (f.contig == contig && f.startPoint + f.cov.length > c.minPos) && f.minPos < c.minPos)
+            .sortBy(r => (r.contig, r.minPos)) // updates for overlaps
         //.filter(f => (f.contigName == c.contigName && f.startPoint + f.cov.length > c.minPos) && f.minPos < c.minPos)
           val upd = filterUpd //should be always 1 or 0 elements, not true for long reads
          // logger.warn(s"#### Partittion ${c.contigName},${c.minPos},${c.maxPos} overlaped by : ${if(filterUpd.length>0) {filterUpd.mkString("|")} else "0"} update structs")
@@ -167,7 +165,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
           .map(_.cumSum)
           .sum
 
-          if(upd.length > 0){ // if there are any updates from overlapping partitions
+          if(upd.nonEmpty){ // if there are any updates from overlapping partitions
               for(u <- upd) {
                 val overlapLength =
                   if ((u.startPoint + u.cov.length) > c.maxPos &&  ( (contigRanges.length - 1 == it) ||  contigRanges(it+1).contig != c.contig))  {
@@ -175,13 +173,13 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
                     u.startPoint + u.cov.length - c.minPos + 1
                   }
                   else if ((u.startPoint + u.cov.length) > c.maxPos) {
-                    (c.maxPos - c.minPos)
+                    c.maxPos - c.minPos
                   }//if it's the last part in contig or the last at all
                   else {
                     u.startPoint + u.cov.length - c.minPos  + 1
                   }
 
-                logger.debug(s"##### Overlap length ${overlapLength} for ${it} from ${u.contig},${u.minPos}, ${u.startPoint},${u.cov.length}")
+                logger.debug(s"##### Overlap length $overlapLength for $it from ${u.contig},${u.minPos}, ${u.startPoint},${u.cov.length}")
                 shrinkMap.get((u.contig, u.minPos)) match {
                   case Some(s) => shrinkMap.update((u.contig, u.minPos), math.min(s,c.minPos - u.minPos + 1))
                   case _ =>  shrinkMap += (u.contig, u.minPos) -> (c.minPos - u.minPos + 1)
@@ -207,11 +205,10 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
                       updateMap.update((c.contig, c.minPos), (Some(newArr), newCumSum))
                     else
                       updateMap.update((c.contig, u.minPos), (Some(newArr), newCumSum)) // delete anything that is > c.minPos
-                  case _ => {
-                    logger.debug(s"overlap u.minPos=${u.minPos} u.max = ${u.minPos + overlapLength - 1} len = ${overlapLength}")
+                  case _ =>
+                    logger.debug(s"overlap u.minPos=${u.minPos} u.max = ${u.minPos + overlapLength - 1} len = $overlapLength")
                     logger.debug(s"first update to updateMap: ${math.max(0,u.startPoint-c.minPos)}, $overlapLength ")
                     updateMap += (c.contig, c.minPos) -> (Some(Array.fill[Short](math.max(0,u.startPoint-c.minPos))(0) ++u.cov.takeRight(overlapLength)), (cumSum - u.cov.takeRight(overlapLength).sum).toShort)
-                  }
                 }
               }
             logger.debug(s"#### Update struct length: ${updateMap(c.contig, c.minPos)._1.get.length}")
@@ -233,7 +230,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
     }
 
     val covBroad = spark.sparkContext.broadcast(prepareBroadcast(acc.value()))
-    lazy val reducedEvents = CoverageMethodsMos.upateContigRange(covBroad, events)
+    lazy val reducedEvents = CoverageMethodsMos.updateContigRange(covBroad, events)
 
     val blocksResult = {
       result.toLowerCase() match {
@@ -255,12 +252,12 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
                 case _ => None
               }
       } catch {
-        case e: Exception => None
+        case _: Exception => None
     }
 
 
     lazy val cov =
-      if(maybeWindowLength != None) //fixed-length window
+      if(maybeWindowLength.isDefined) //fixed-length window
         CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos,maybeWindowLength,None)
 
           .keyBy(_.key)
@@ -276,7 +273,7 @@ case class BDGCoveragePlan [T<:BDGAlignInputFormat](plan: LogicalPlan, spark: Sp
        else
         CoverageMethodsMos.eventsToCoverage(sampleId, reducedEvents, covBroad.value.minmax, blocksResult, allPos,None, None)
 
-    if(maybeWindowLength != None) {   // windows
+    if(maybeWindowLength.isDefined) {   // windows
 
       cov.mapPartitions(p => {
         val proj = UnsafeProjection.create(schema)
