@@ -4,55 +4,61 @@ import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import htsjdk.samtools.ValidationStringency
 import org.apache.hadoop.io.LongWritable
 import org.biodatageeks.sequila.rangejoins.IntervalTree.IntervalTreeJoinStrategyOptim
+import org.biodatageeks.sequila.utils.Columns
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 import org.seqdoop.hadoop_bam.{BAMInputFormat, SAMRecordWritable}
 
-case class Region(contig:String, start:Int, end:Int)
-case class Gene(contig:String,start:Int,end:Int,geneId:String,strand:String)
+case class Region(contig: String, start: Int, end: Int)
+case class Gene(contig: String,
+                start: Int,
+                end: Int,
+                geneId: String,
+                strand: String)
 
-class FeatureCountsTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext{
+class FeatureCountsTestSuite
+    extends FunSuite
+    with DataFrameSuiteBase
+    with BeforeAndAfter
+    with SharedSparkContext {
 
-
-  before{
+  before {
     System.setSecurityManager(null)
-    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(spark) :: Nil
+    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(
+      spark) :: Nil
   }
 
-  test ("Feature counts for chr1:20138-20294") {
-    val query ="""SELECT count(*),targets.contigName,targets.start,targets.end
-              FROM reads JOIN targets
+  test("Feature counts for chr1:20138-20294") {
+    val query = s"""
+        | SELECT count(*),targets.${Columns.CONTIG},targets.${Columns.START},targets.${Columns.END}
+        | FROM reads JOIN targets
         |ON (
-        |  targets.contigName=reads.contigName
+        |  targets.${Columns.CONTIG}=reads.${Columns.CONTIG}
         |  AND
-        |  reads.end >= targets.start
+        |  reads.${Columns.END} >= targets.${Columns.START}
         |  AND
-        |  reads.start <= targets.end
+        |  reads.${Columns.START} <= targets.${Columns.END}
         |)
-        |GROUP BY targets.contigName,targets.start,targets.end
-        |having contigName='chr1' AND    start=20138 AND  end=20294""".stripMargin
+        | GROUP BY targets.${Columns.CONTIG},targets.${Columns.START},targets.${Columns.END}
+        | HAVING ${Columns.CONTIG}='chr1' AND ${Columns.START} = 20138 AND ${Columns.END} = 20294""".stripMargin
 
+    spark.sparkContext.hadoopConfiguration.set(
+      SAMHeaderReader.VALIDATION_STRINGENCY_PROPERTY,
+      ValidationStringency.SILENT.toString)
 
-    spark
-      .sparkContext
-      .hadoopConfiguration.set(SAMHeaderReader.VALIDATION_STRINGENCY_PROPERTY, ValidationStringency.SILENT.toString)
-
-    val alignments = spark
-      .sparkContext
-      .newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat](getClass.getResource("/NA12878.slice.bam").getPath)
+    val alignments = spark.sparkContext
+      .newAPIHadoopFile[LongWritable, SAMRecordWritable, BAMInputFormat](
+        getClass.getResource("/NA12878.slice.bam").getPath)
       .map(_._2.get)
       .map(r => Region(r.getContig, r.getStart, r.getEnd))
 
-
-    val reads = spark
-      .sqlContext
+    val reads = spark.sqlContext
       .createDataFrame(alignments)
 
     reads.createOrReplaceTempView("reads")
 
-    val targets = spark
-      .sqlContext
-      .createDataFrame(Array(Region("chr1",20138,20294)))
+    val targets = spark.sqlContext
+      .createDataFrame(Array(Region("chr1", 20138, 20294)))
 
     targets.createOrReplaceTempView("targets")
 
@@ -61,7 +67,4 @@ class FeatureCountsTestSuite extends FunSuite with DataFrameSuiteBase with Befor
 
   }
 
-
-
 }
-
