@@ -4,26 +4,33 @@ import java.io.{OutputStreamWriter, PrintWriter}
 
 import com.holdenkarau.spark.testing.{DataFrameSuiteBase, SharedSparkContext}
 import org.apache.spark.sql.SequilaSession
-import org.bdgenomics.utils.instrumentation.{Metrics, MetricsListener, RecordedMetrics}
+import org.bdgenomics.utils.instrumentation.{
+  Metrics,
+  MetricsListener,
+  RecordedMetrics
+}
 import org.biodatageeks.sequila.rangejoins.IntervalTree.IntervalTreeJoinStrategyOptim
 import org.biodatageeks.sequila.utils.Columns
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
-class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter with SharedSparkContext {
+class MultisampleBAMTestSuite
+    extends FunSuite
+    with DataFrameSuiteBase
+    with BeforeAndAfter
+    with SharedSparkContext {
 
-
-  val bamPath: String = getClass.getResource("/multisample").getPath+"/*.bam"
+  val bamPath: String = getClass.getResource("/multisample").getPath + "/*.bam"
   val metricsListener = new MetricsListener(new RecordedMetrics())
   val writer = new PrintWriter(new OutputStreamWriter(System.out))
   val tableNameBAM = "reads"
 
-  before{
+  before {
     Metrics.initialize(sc)
     sc.addSparkListener(metricsListener)
-    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(spark) :: Nil
+    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(
+      spark) :: Nil
     spark.sql(s"DROP TABLE IF EXISTS $tableNameBAM")
-    spark.sql(
-      s"""
+    spark.sql(s"""
          |CREATE TABLE $tableNameBAM
          |USING org.biodatageeks.sequila.datasources.BAM.BAMDataSource
          |OPTIONS(path "$bamPath")
@@ -32,20 +39,24 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
 
   }
 
-  test("Multisample BAM Table"){
-    assert(spark
-      .sql(s"SELECT * FROM $tableNameBAM")
-      .count === 9516L)
+  test("Multisample BAM Table") {
+    assert(
+      spark
+        .sql(s"SELECT * FROM $tableNameBAM")
+        .count === 9516L)
   }
 
-  test("Sample name"){
+  test("Sample name") {
     assert(spark
-      .sql(s"SELECT ${Columns.SAMPLE} FROM $tableNameBAM order by ${Columns.SAMPLE}")
-      .first.getString(0) === "NA12877")
+      .sql(
+        s"SELECT ${Columns.SAMPLE} FROM $tableNameBAM order by ${Columns.SAMPLE}")
+      .first
+      .getString(0) === "NA12877")
   }
 
-  test("Feature counts with multiple samples"){
-    val query =s"""SELECT ${Columns.SAMPLE}, count(*), targets.${Columns.CONTIG}, targets.${Columns.START}, targets.${Columns.END}
+  test("Feature counts with multiple samples") {
+    val query =
+      s"""SELECT ${Columns.SAMPLE}, count(*), targets.${Columns.CONTIG}, targets.${Columns.START}, targets.${Columns.END}
               FROM reads JOIN targets
         |ON (
         |  targets.${Columns.CONTIG}=reads.${Columns.CONTIG}
@@ -56,8 +67,7 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
         |)
         |GROUP BY ${Columns.SAMPLE}, targets.${Columns.CONTIG}, targets.${Columns.START}, targets.${Columns.END}
         |HAVING ${Columns.CONTIG}='chr1' AND  ${Columns.START}=20138 AND  ${Columns.END}=20294 and ${Columns.SAMPLE}='NA12878'""".stripMargin
-    val targets = spark
-      .sqlContext
+    val targets = spark.sqlContext
       .createDataFrame(Array(Region("chr1", 20138, 20294)))
     targets
       .createOrReplaceTempView("targets")
@@ -65,7 +75,7 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
   }
 
   test("Multisample groupby - cast issue") {
-    val ss = new SequilaSession(spark)
+    val ss = SequilaSession(spark)
     val query =
       s"""
         |SELECT targets.GeneId as GeneId, targets.${Columns.CONTIG} as Chr,
@@ -77,18 +87,16 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
         |GROUP BY targets.GeneId, targets.${Columns.CONTIG}, targets.${Columns.START}, targets.${Columns.END}, targets.${Columns.STRAND}
       """.stripMargin
 
-    val targets = ss
-      .sqlContext
-      .createDataFrame(Array(Gene("chr1",20138,20294,"TestGene","+")))
+    val targets = ss.sqlContext
+      .createDataFrame(Array(Gene("chr1", 20138, 20294, "TestGene", "+")))
     targets
       .createOrReplaceTempView("targets")
 
-    ss.sql(query).explain(true)
     ss.sql(query).count
     assert(spark.sql(query).first().getLong(5) === 4452L)
   }
 
-  test("Multisample - partition pruning one sample test"){
+  test("Multisample - partition pruning one sample test") {
 
     val query =
       s"""
@@ -98,11 +106,10 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
         |LIMIT 5
       """.stripMargin
 
-    println(query)
     assert(spark.sql(query).first().getString(0) === "NA12879")
   }
 
-  test("Multisample - partition pruning many samples test"){
+  test("Multisample - partition pruning many samples test") {
 
     val query =
       s"""
@@ -113,13 +120,10 @@ class MultisampleBAMTestSuite extends FunSuite with DataFrameSuiteBase with Befo
         |ORDER BY ${Columns.SAMPLE}
       """.stripMargin
 
-    //spark.sql(query).explain(true)
-    println(query)
     val res = spark.sql(query).take(2)
     assert(res(0).getString(0) === "NA12878" && res(0).getLong(1) === 3172L)
     assert(res(1).getString(0) === "NA12879" && res(1).getLong(1) === 3172L)
 
   }
-
 
 }

@@ -1,3 +1,4 @@
+//FIXME: does this test should work?
 //package org.biodatageeks.sequila.tests.datasources
 //
 //import java.io.{File, OutputStreamWriter, PrintWriter}

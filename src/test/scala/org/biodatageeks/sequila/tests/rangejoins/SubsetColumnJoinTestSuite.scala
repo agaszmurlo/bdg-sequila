@@ -4,29 +4,78 @@ import java.io.{OutputStreamWriter, PrintWriter}
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
-import org.bdgenomics.utils.instrumentation.{Metrics, MetricsListener, RecordedMetrics}
+import org.apache.spark.sql.types.{
+  IntegerType,
+  StringType,
+  StructField,
+  StructType
+}
+import org.bdgenomics.utils.instrumentation.{
+  Metrics,
+  MetricsListener,
+  RecordedMetrics
+}
 import org.biodatageeks.sequila.rangejoins.IntervalTree.IntervalTreeJoinStrategyOptim
 import org.biodatageeks.sequila.utils.Columns
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
 import scala.util.Random
 
-class SubsetColumnJoinTestSuite extends FunSuite with DataFrameSuiteBase with BeforeAndAfter{
-
+class SubsetColumnJoinTestSuite
+    extends FunSuite
+    with DataFrameSuiteBase
+    with BeforeAndAfter {
 
   val metricsListener = new MetricsListener(new RecordedMetrics())
   val writer = new PrintWriter(new OutputStreamWriter(System.out))
 
   before {
-    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(spark) :: Nil
-    val schema = StructType(Seq(StructField(s"${Columns.SAMPLE}", StringType),StructField(s"${Columns.CONTIG}", StringType),StructField(s"${Columns.START}", IntegerType), StructField(s"${Columns.END}", IntegerType),StructField(s"${Columns.COVERAGE}", IntegerType)))
-    val rdd = sc.parallelize(1L to 1000000L).map(k=>Row(s"sample${1+(math.random *100).toInt}",s"${1+(math.random *20).toInt}",k.toInt,(k+k*math.random * (100)).toInt,(math.random * (30) + 10).toInt))
+    spark.experimental.extraStrategies = new IntervalTreeJoinStrategyOptim(
+      spark) :: Nil
+    val schema = StructType(
+      Seq(
+        StructField(s"${Columns.SAMPLE}", StringType),
+        StructField(s"${Columns.CONTIG}", StringType),
+        StructField(s"${Columns.START}", IntegerType),
+        StructField(s"${Columns.END}", IntegerType),
+        StructField(s"${Columns.COVERAGE}", IntegerType)
+      ))
+    val rdd = sc
+      .parallelize(1L to 1000000L)
+      .map(
+        k =>
+          Row(s"sample${1 + (math.random * 100).toInt}",
+              s"${1 + (math.random * 20).toInt}",
+              k.toInt,
+              (k + k * math.random * 100).toInt,
+              (math.random * 30 + 10).toInt))
     val ds1 = spark.sqlContext.createDataFrame(rdd, schema)
     ds1.createOrReplaceTempView("sample_interval_temp")
 
-    val schema2 = StructType(Seq(StructField(s"${Columns.CONTIG}", StringType),StructField(s"${Columns.START}", IntegerType), StructField(s"${Columns.END}", IntegerType),StructField("text_1", StringType),StructField("text_2", StringType),StructField("text_3", StringType),StructField("text_4", StringType),StructField("text_5", StringType)))
-    val rdd2 = sc.parallelize(1L to 100L).map(k=>Row(s"${1+(math.random *20).toInt}",k.toInt,(k+k*math.random * (100)).toInt,Random.alphanumeric.take(10).mkString,Random.alphanumeric.take(15).mkString,Random.alphanumeric.take(5).mkString,Random.alphanumeric.take(10).mkString,Random.alphanumeric.take(3).mkString))
+    val schema2 = StructType(
+      Seq(
+        StructField(s"${Columns.CONTIG}", StringType),
+        StructField(s"${Columns.START}", IntegerType),
+        StructField(s"${Columns.END}", IntegerType),
+        StructField("text_1", StringType),
+        StructField("text_2", StringType),
+        StructField("text_3", StringType),
+        StructField("text_4", StringType),
+        StructField("text_5", StringType)
+      ))
+    val rdd2 = sc
+      .parallelize(1L to 100L)
+      .map(k =>
+        Row(
+          s"${1 + (math.random * 20).toInt}",
+          k.toInt,
+          (k + k * math.random * 100).toInt,
+          Random.alphanumeric.take(10).mkString,
+          Random.alphanumeric.take(15).mkString,
+          Random.alphanumeric.take(5).mkString,
+          Random.alphanumeric.take(10).mkString,
+          Random.alphanumeric.take(3).mkString
+      ))
     val ds2 = spark.sqlContext.createDataFrame(rdd2, schema2)
     ds2.createOrReplaceTempView("annotation_temp")
 
@@ -35,7 +84,7 @@ class SubsetColumnJoinTestSuite extends FunSuite with DataFrameSuiteBase with Be
 
   }
 
-  test ("Select subset of columms"){
+  test("Select subset of columns") {
 
     val sqlQuery =
       s"""
@@ -54,10 +103,9 @@ class SubsetColumnJoinTestSuite extends FunSuite with DataFrameSuiteBase with Be
       .sql(sqlQuery)
       .show
 
-
   }
 
-  after{
+  after {
 
     Metrics.print(writer, Some(metricsListener.metrics.sparkMetrics.stageTimes))
     writer.flush()
